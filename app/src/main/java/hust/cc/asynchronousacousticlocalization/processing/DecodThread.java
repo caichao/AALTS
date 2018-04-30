@@ -77,7 +77,7 @@ public class DecodThread extends Decoder implements Runnable{
                     TDOAUtils tdoaUtils = new TDOAUtils();
 
                     tdoaUtils.loopIndex = mLoopCounter;
-                    tdoaUtils.preambleType = FlagVar.UP_PREAMBLE;
+                    tdoaUtils.preambleType = FlagVar.DOWN_PREAMBLE;
                     tdoaUtils.timeIndex = mIndexMaxVarInfo.index;
                     tdoaUtils.TDOACounter = mTDOACounter;
                     tdoaUtils.correspondingAnchorID = anchorID;
@@ -88,7 +88,7 @@ public class DecodThread extends Decoder implements Runnable{
 
                 // 4. process the TDOA time information
                 if(mTDOACounter == 2) {// receive two TDOA timming information
-
+                    processTDOAInformation();
                 }
             }
         }

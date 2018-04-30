@@ -6,12 +6,15 @@ import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.widget.TextView;
 
+import org.json.JSONObject;
+
 import butterknife.ButterKnife;
 import hust.cc.asynchronousacousticlocalization.R;
 import hust.cc.asynchronousacousticlocalization.physical.AudioRecorder;
 import hust.cc.asynchronousacousticlocalization.utils.FlagVar;
+import hust.cc.asynchronousacousticlocalization.utils.OKSocket;
 
-public class MainActivity extends AppCompatActivity implements AudioRecorder.RecordingCallback {
+public class MainActivity extends AppCompatActivity implements AudioRecorder.RecordingCallback, OKSocket.Callback {
 
 
     @Override
@@ -32,6 +35,12 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
 
     }
 
+    // here we process the received message from the server
+    @Override
+    public void onReceiveSocketMsg(JSONObject jsonObject) {
+
+    }
+
     public Handler myHandler = new Handler(){
 
         @Override
@@ -44,4 +53,6 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
             }
         }
     };
+
+
 }
