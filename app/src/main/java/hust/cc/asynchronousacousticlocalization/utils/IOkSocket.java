@@ -1,10 +1,10 @@
 package hust.cc.asynchronousacousticlocalization.utils;
 
 public interface IOkSocket {
-    // indicate whether the send command is completed
-    public void onSendComplete();
-    // receive command from the server
-    public void onRecieve();
-    // send command to Server
-    public void send();
+    // configure the socket like IP address or the port number
+    public void init(String IP, int port);
+    // establish connection with the remote server
+    public void connect();
+    // shutdown the connection
+    public void close();
 }

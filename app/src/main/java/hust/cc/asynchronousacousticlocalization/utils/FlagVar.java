@@ -50,4 +50,6 @@ public interface FlagVar {
     public int numberOfPreviousSamples = 100;
     public double ratioThreshold = 5;
     /*****************************************************/
+
+
 }

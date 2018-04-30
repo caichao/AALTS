@@ -1,18 +1,19 @@
 package hust.cc.asynchronousacousticlocalization.utils;
 
 public class OKSocket implements IOkSocket {
+
     @Override
-    public void onSendComplete() {
+    public void init(String ip, int port) {
 
     }
 
     @Override
-    public void onRecieve() {
+    public void connect() {
 
     }
 
     @Override
-    public void send() {
+    public void close() {
 
     }
 }

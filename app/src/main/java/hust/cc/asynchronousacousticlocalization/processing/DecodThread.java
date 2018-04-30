@@ -111,9 +111,16 @@ public class DecodThread extends Decoder implements Runnable{
             message.what = FlagVar.MESSAGE_TDOA;
 
 
-            int tdoa;
+            int tdoa = (mFirstAnchorInfo.loopIndex - mSecondAnchorInfo.loopIndex) * processBufferSize + mFirstAnchorInfo.timeIndex - mSecondAnchorInfo.timeIndex;
+            message.arg1 = tdoa;
+            // the first four bits store the first anchor id, the last four bit store the second anchor ID
+            message.arg2 = mFirstAnchorInfo.correspondingAnchorID << 4 | mSecondAnchorInfo.correspondingAnchorID;
+
+            mHandler.sendMessage(message);
+
         } else{
             mTDOACounter = 1;
+            preambleInfoList.pollFirst(); // remove the first preamble
         }
     }
 
