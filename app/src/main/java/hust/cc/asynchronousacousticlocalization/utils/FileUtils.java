@@ -39,7 +39,7 @@ public class FileUtils {
         }
     }
 
-    public static void saveBytes(double[] bytes, String name){
+    public static void saveBytes(float[] bytes, String name){
         File file = new File(SDPATH+name+".txt");
         FileWriter fw = null;
         try {
@@ -62,7 +62,7 @@ public class FileUtils {
         }
     }
 
-    public static void saveList(List<Double> bytes, String name){
+    public static void saveList(List<Float> bytes, String name){
         File file = new File(SDPATH+name+".txt");
         FileWriter fw = null;
         try {
@@ -85,15 +85,15 @@ public class FileUtils {
         }
     }
 
-    public static double[] readTxt(String name, int length){
+    public static float[] readTxt(String name, int length){
         String tmp = "";
         FileReader fileReader = null;
         BufferedReader bufferedReader = null;
-        double[] pcm = null;
+        float[] pcm = null;
         try{
             fileReader = new FileReader(new File(SDPATH + name));
             bufferedReader = new BufferedReader(fileReader);
-            pcm = new double[length];
+            pcm = new float[length];
             int i = 0;
             while ((tmp = bufferedReader.readLine()) != null){
                 pcm[i++] = (short) Float.parseFloat(tmp);
@@ -113,18 +113,18 @@ public class FileUtils {
         return pcm;
     }
 
-    public static double[] readFilterCoefficient(String name, int length){
+    public static float[] readFilterCoefficient(String name, int length){
         String tmp = "";
         FileReader fileReader = null;
         BufferedReader bufferedReader = null;
-        double[] filterCoefficient = null;
+        float[] filterCoefficient = null;
         try{
             fileReader = new FileReader(new File(SDPATH + name));
             bufferedReader = new BufferedReader(fileReader);
-            filterCoefficient = new double[length];
+            filterCoefficient = new float[length];
             int i = 0;
             while ((tmp = bufferedReader.readLine()) != null){
-                filterCoefficient[i++] = Double.parseDouble(tmp);
+                filterCoefficient[i++] = Float.parseFloat(tmp);
             }
         }catch (Exception e){
             e.printStackTrace();

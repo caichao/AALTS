@@ -22,26 +22,26 @@ public class Decoder implements FlagVar{
     // create variables to store the samples in case frequent new and return
 
     public short[] bufferedSamples = new short[processBufferSize];
-    public double[] normalizedSamples = new double[processBufferSize];
+    public float[] normalizedSamples = new float[processBufferSize];
 
     /**
      * refresh the buffer area
      */
     public void normalizeBufferSamples(){
         for(int i = 0 ; i < processBufferSize ; i++){
-            normalizedSamples[i] = bufferedSamples[i] / 32768.0;
+            normalizedSamples[i] = bufferedSamples[i] / 32768.0f;
         }
     }
 
     /**
-     * normalize the short data to double array
+     * normalize the short data to float array
      * @param s : data stream of short samples
-     * @return normalized data in double format
+     * @return normalized data in float format
      */
-    public double[] normalization(short s[]){
-        double[] normalized = new double[s.length];
+    public float[] normalization(short s[]){
+        float[] normalized = new float[s.length];
         for (int i = 0; i < s.length; i++) {
-            normalized[i] = (double) (s[i]) / 32768;
+            normalized[i] = (float) (s[i]) / 32768;
         }
         return normalized;
     }
@@ -52,7 +52,7 @@ public class Decoder implements FlagVar{
      * @param reference: reference signal
      * @return: return the max value and its index
      */
-    public IndexMaxVarInfo xcorr(double s[], double[] reference){
+    public IndexMaxVarInfo xcorr(float s[], float[] reference){
         IndexMaxVarInfo indexMaxVarInfo = new IndexMaxVarInfo();
 
         // TODO here, implementation of normaized xcorr
@@ -91,7 +91,7 @@ public class Decoder implements FlagVar{
     }
 
 
-    public short[] xcorrBasic(double s[], int low, int high, double[] reference){
+    public short[] xcorrBasic(float s[], int low, int high, float[] reference){
 
         short[] samples = new short[1];
 
@@ -122,7 +122,7 @@ public class Decoder implements FlagVar{
             // use the ratio of peak value to the mean value of its previous 200 samples
             int startIndex = indexMaxVarInfo.index - numberOfPreviousSamples;
             if(startIndex < 0) startIndex = 0;  // in case the preamble exist in the head of the buffer
-            double ratio = indexMaxVarInfo.maxVar / Algorithm.meanValue(s, startIndex, indexMaxVarInfo.index);
+            float ratio = indexMaxVarInfo.maxVar / Algorithm.meanValue(s, startIndex, indexMaxVarInfo.index);
             if(ratio > ratioThreshold)
                 indexMaxVarInfo.isReferenceSignalExist = true;
         }
@@ -140,9 +140,9 @@ public class Decoder implements FlagVar{
         int startIndex = p.index + FlagVar.preambleLength + FlagVar.guardIntervalLength;
         int endIndex = startIndex + FlagVar.symbolLength - 1;
 
-        double[] maxRatios = new double[numberOfSymbols];
+        float[] maxRatios = new float[numberOfSymbols];
         short[] correlationResult = null;
-        double max = 0;
+        float max = 0;
         int mean = 0;
         // use the max/mean ratio as the indicator for symbol decoding
         if(isUpSymbol) {

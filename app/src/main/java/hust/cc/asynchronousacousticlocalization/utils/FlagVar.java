@@ -25,14 +25,14 @@ public interface FlagVar {
 
     /*****************************************************/
     // parameters for the preamble
-    public double TPreamble = 0.04;
+    public float TPreamble = 0.04f;
     public int BPreamble = 4000;
     public int Fmin = 17500;
     public int Fmax = 21500;
     public int preambleLength = (int)(Fs * TPreamble);
 
     // parameter for the symbols
-    public double TSymbol = 0.03;
+    public float TSymbol = 0.03f;
     public int BSymbol = 1000;
     public int [] FUpSymbol = new int[]{17500, 18500, 19500, 20500};
     public int [] FDownSymbol = new int[]{21500, 20500, 19500, 18500};
@@ -40,15 +40,15 @@ public interface FlagVar {
     public int numberOfSymbols = 4;
 
     // guard interval
-    public double guardInterval = 0.005;
+    public float guardInterval = 0.005f;
     public int guardIntervalLength = (int)(guardInterval * Fs);
 
     /*****************************************************/
 
     /***********************threshold parameters*********************/
-    public double preambleDetectionThreshold= 0.03;
+    public float preambleDetectionThreshold= 0.03f;
     public int numberOfPreviousSamples = 100;
-    public double ratioThreshold = 5;
+    public float ratioThreshold = 5;
     /*****************************************************/
 
 
