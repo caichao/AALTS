@@ -1,5 +1,7 @@
 package hust.cc.asynchronousacousticlocalization.processing;
 
+import org.jtransforms.fft.FloatFFT_1D;
+
 import hust.cc.asynchronousacousticlocalization.physical.SignalGenerator;
 import hust.cc.asynchronousacousticlocalization.utils.FlagVar;
 
@@ -48,15 +50,52 @@ public class Decoder implements FlagVar{
 
     /**
      * correlation results, return both the max value and its index
-     * @param s: audio samples
-     * @param reference: reference signal
+     * @param data1: audio samples
+     * @param data2: reference signal
      * @return: return the max value and its index
      */
-    public IndexMaxVarInfo xcorr(float s[], float[] reference){
+    public IndexMaxVarInfo xcorr(float []data1, float[] data2){
         IndexMaxVarInfo indexMaxVarInfo = new IndexMaxVarInfo();
 
-        // TODO here, implementation of normaized xcorr
-        // TODO : should call xccorrBasic
+        int len = (int)Math.ceil((float)(data1.length+data2.length)/2)*2;
+        float[] hData1 = new float[len];
+        float[] hData2 = new float[len];
+        for(int i=0;i<len;i++){
+            if(i<data1.length){
+                hData1[i] = data1[i];
+            }else{
+                hData1[i] = 0;
+            }
+            if(i<data2.length){
+                hData2[i] = data2[i];
+            }else{
+                hData2[i] = 0;
+            }
+        }
+        float[] result = new float[len];
+        float[] corr = new float[data1.length+data2.length-1];
+        FloatFFT_1D fft = new FloatFFT_1D(len);
+        fft.realForward(hData1);
+        fft.realForward(hData2);
+
+        result[0] = hData1[0] * hData2[0]; // value at f=0Hz is real-valued
+        result[1] = hData1[1] * hData2[1]; // value at f=fs/2 is real-valued and packed at index 1
+        for (int i = 1 ; i < result.length / 2 ; ++i) {
+            float a = hData1[2*i];
+            float b = hData1[2*i + 1];
+            float c = hData2[2*i];
+            float d = hData2[2*i + 1];
+
+            result[2*i]     = a*c + b*d;
+            result[2*i + 1] = b*c - a*d;
+        }
+        fft.realInverse(result, true);
+        for(int i=0;i<corr.length;i++){
+            corr[i] = Math.abs(result[i]);
+        }
+
+
+
         return indexMaxVarInfo;
     }
 

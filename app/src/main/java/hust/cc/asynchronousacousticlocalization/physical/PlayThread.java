@@ -29,7 +29,7 @@ public class PlayThread extends Thread implements FlagVar{
      * fill the buffer to the audiotrack and play
      * @param data
      */
-    public void fillBufferAndPlay(byte[] data){
+    public void fillBufferAndPlay(short[] data){
         // firt clear the buffer
         Arrays.fill(buffer, (short)(0));
         // copy short samples to the buffer
