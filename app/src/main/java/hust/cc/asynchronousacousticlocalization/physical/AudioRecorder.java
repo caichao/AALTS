@@ -30,7 +30,7 @@ public class AudioRecorder implements IAudioRecorder{
     public static final int RECORDER_STATE_STOPPING = 2;
     public static final int RECORDER_STATE_BUSY = 3;
 
-    private volatile int recorderState;
+    private volatile int recorderState = RECORDER_STATE_IDLE;
 
     private final Object recorderStateMonitor = new Object();
 
@@ -78,14 +78,7 @@ public class AudioRecorder implements IAudioRecorder{
             @SuppressWarnings("ResultOfMethodCallIgnored")
             @Override
             public void runImpl() {
-                int bufferSize = Math.max(BUFFER_BYTES_ELEMENTS * BUFFER_BYTES_PER_ELEMENT,
-                        AudioRecord.getMinBufferSize(RECORDER_SAMPLE_RATE, RECORDER_CHANNELS_IN, RECORDER_AUDIO_ENCODING));
-
-                int size = 1024;
-                while(size < bufferSize){
-                    size = size * 2;
-                }
-                bufferSize = size;
+                int bufferSize = getBufferSize();
 
                 AudioRecord recorder = new AudioRecord(MediaRecorder.AudioSource.MIC, RECORDER_SAMPLE_RATE, RECORDER_CHANNELS_IN, RECORDER_AUDIO_ENCODING, bufferSize);
                 if(recorder.getState() == AudioRecord.STATE_UNINITIALIZED){
@@ -102,12 +95,12 @@ public class AudioRecorder implements IAudioRecorder{
 
                     short recordBuffer[] = new short[bufferSize];
                     do {
-                        int bytesRead = recorder.read(recordBuffer, 0, bufferSize);
+                        int len = recorder.read(recordBuffer, 0, bufferSize);
 
-                        if (bytesRead > 0) {
-                            recordingCallback.onDataReady(recordBuffer,bytesRead);
+                        if (len > 0) {
+                            recordingCallback.onDataReady(recordBuffer,len);
                         } else {
-                            Log.e(AudioRecorder.class.getSimpleName(), "error: " + bytesRead);
+                            Log.e(AudioRecorder.class.getSimpleName(), "error: " + len);
                             onRecordFailure();
                         }
                     } while (recorderState == RECORDER_STATE_BUSY);
@@ -143,6 +136,18 @@ public class AudioRecorder implements IAudioRecorder{
                 } while (recorderStateLocal == RECORDER_STATE_STOPPING);
             }
         }
+    }
+
+    public static int getBufferSize(){
+        int bufferSize = Math.max(BUFFER_BYTES_ELEMENTS * BUFFER_BYTES_PER_ELEMENT,
+                AudioRecord.getMinBufferSize(RECORDER_SAMPLE_RATE, RECORDER_CHANNELS_IN, RECORDER_AUDIO_ENCODING));
+
+        int size = 1024;
+        while(size < bufferSize){
+            size = size * 2;
+        }
+        bufferSize = size;
+        return bufferSize;
     }
 
 

@@ -31,6 +31,7 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
 
     private AudioRecorder audioRecorder = new AudioRecorder();
     private PlayThread playThread = new PlayThread();
+    private DecodThread decodThread;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -41,11 +42,18 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
 
     private void initParams(){
 
+        decodThread = new DecodThread(myHandler);
+        decodThread.setProcessBufferSize(AudioRecorder.getBufferSize());
+        new Thread(decodThread).start();
         audioRecorder.recordingCallback(this);
         recvButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                audioRecorder.startRecord();
+                if(!audioRecorder.isRecording()) {
+                    audioRecorder.startRecord();
+                }else{
+                    audioRecorder.finishRecord();
+                }
             }
         });
 
@@ -66,9 +74,8 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
 
     // here we process the received audio samples
     @Override
-    public void onDataReady(short[] data, int bytelen) {
-        DecodThread decodThread = new DecodThread(myHandler);
-        decodThread.run();
+    public void onDataReady(short[] data, int len) {
+        decodThread.fillSamples(data);
     }
 
     // here we process the received message from the server

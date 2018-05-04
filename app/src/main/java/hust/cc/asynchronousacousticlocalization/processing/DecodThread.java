@@ -5,6 +5,8 @@ import android.os.Message;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
+import java.util.LinkedList;
+import java.util.List;
 
 import hust.cc.asynchronousacousticlocalization.utils.FlagVar;
 
@@ -19,6 +21,7 @@ public class DecodThread extends Decoder implements Runnable{
     private Deque<TDOAUtils> preambleInfoList;
     private int mTDOACounter = 0;
     private Handler mHandler;
+    public List<Short[]> samplesList;
 
     private IndexMaxVarInfo mIndexMaxVarInfo;
 
@@ -26,6 +29,7 @@ public class DecodThread extends Decoder implements Runnable{
         mIndexMaxVarInfo = new IndexMaxVarInfo();
         mTDOAUtils = new TDOAUtils();
         preambleInfoList = new ArrayDeque<>();
+        samplesList = new LinkedList<Short[]>();
         this.mHandler = mHandler;
     }
 
@@ -34,21 +38,36 @@ public class DecodThread extends Decoder implements Runnable{
      * @param s - input coming from the audio buffer
      */
     public void fillSamples(short[] s){
-        synchronized (this){
-            isBufferReady = true;
+
+        Short[] samples = new Short[processBufferSize];
+        for(int i=0;i<samples.length;i++){
+            samples[i] = s[i];
         }
-        System.arraycopy(s, s.length, this.bufferedSamples, 0, s.length);
+        synchronized (samplesList) {
+            samplesList.add(samples);
+        }
+
     }
 
     @Override
     public void run() {
 
         while (isThreadRunning){
-            if(isBufferReady){
+            if(samplesList.size() >= 2){
+                synchronized (samplesList) {
+                    short[] bufferedSamples = new short[processBufferSize + FlagVar.beconMessageLength];
+                    for (int i = 0; i < beconMessageLength; i++) {
+                        bufferedSamples[i] = samplesList.get(0)[i];
+                    }
+                    for (int i = beconMessageLength; i < processBufferSize + beconMessageLength; i++) {
+                        bufferedSamples[i] = samplesList.get(1)[i - beconMessageLength];
+                    }
+                }
+
                 mLoopCounter ++;
                 // 1. the first step is to check the existence of preamble either up or down
                 mIndexMaxVarInfo.isReferenceSignalExist = false;
-                mIndexMaxVarInfo = xcorrFast(bufferedSamples, upPreamble);
+                mIndexMaxVarInfo = getIndexMaxVarInfoFromSignals(bufferedSamples, upPreamble);
 
                 // 2. if the preamble exist, then decode the anchor ID
                 if(mIndexMaxVarInfo.isReferenceSignalExist){
@@ -69,7 +88,7 @@ public class DecodThread extends Decoder implements Runnable{
 
                 // 3. check the down preamble and do the above operation again
                 mIndexMaxVarInfo.isReferenceSignalExist = false;
-                mIndexMaxVarInfo = xcorrFast(bufferedSamples, downPreamble);
+                mIndexMaxVarInfo = getIndexMaxVarInfoFromSignals(bufferedSamples, downPreamble);
                 if(mIndexMaxVarInfo.isReferenceSignalExist){
                     mTDOACounter ++;
 
@@ -87,7 +106,10 @@ public class DecodThread extends Decoder implements Runnable{
                 }
 
                 // 4. process the TDOA time information
-                if(mTDOACounter == 2) {// receive two TDOA timming information
+                if(mTDOACounter >= 2) {// receive two TDOA timming information
+                    if(mTDOACounter == 3){
+                        preambleInfoList.pollFirst();
+                    }
                     processTDOAInformation();
                 }
             }

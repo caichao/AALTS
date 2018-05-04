@@ -8,7 +8,6 @@ public interface FlagVar {
     // buffer length to store the samples for the audiotrack (for play thread)
     public int bufferSize = 20480;
     // buffer length to process the samples for the audiorecorder (for the decoder thread)
-    public int processBufferSize = 9600;
 
     /*********** constant parameters ***************************/
     // the constant parameters for the signal representation
@@ -50,6 +49,10 @@ public interface FlagVar {
     public int numberOfPreviousSamples = 100;
     public float ratioThreshold = 5;
     /*****************************************************/
+
+    //becon message
+    float beconMessageTime = TPreamble+guardInterval+TSymbol;
+    int beconMessageLength = (int)(beconMessageTime*Fs);
 
 
 }

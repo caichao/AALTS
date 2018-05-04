@@ -23,6 +23,18 @@ public class Decoder implements FlagVar{
 
     // create variables to store the samples in case frequent new and return
 
+    public int processBufferSize = 9600;
+
+    public void setProcessBufferSize(int processBufferSize){
+        this.processBufferSize = processBufferSize;
+        bufferedSamples = new short[processBufferSize];
+        normalizedSamples = new float[processBufferSize];
+    }
+
+    public int getProcessBufferSize() {
+        return processBufferSize;
+    }
+
     public short[] bufferedSamples = new short[processBufferSize];
     public float[] normalizedSamples = new float[processBufferSize];
 
@@ -48,14 +60,35 @@ public class Decoder implements FlagVar{
         return normalized;
     }
 
+
     /**
      * correlation results, return both the max value and its index
      * @param data1: audio samples
      * @param data2: reference signal
      * @return: return the max value and its index
      */
-    public IndexMaxVarInfo xcorr(float []data1, float[] data2){
+
+    public IndexMaxVarInfo getIndexMaxVarInfoFromFloats(float[] data1,float[] data2){
         IndexMaxVarInfo indexMaxVarInfo = new IndexMaxVarInfo();
+        float[] corr = xcorr(data1,data2);
+        int index = getMaxPosFromCorrFloat(corr,data2.length);
+        indexMaxVarInfo.index = index;
+        indexMaxVarInfo.maxVar = corr[index];
+
+        IndexMaxVarInfo resultInfo = preambleDetection(corr,indexMaxVarInfo);
+        return resultInfo;
+    }
+
+
+
+
+    /**
+     * calculate correlation results,
+     * @param data1: audio samples
+     * @param data2: reference signal
+     * @return: return the max value and its index
+     */
+    public float[] xcorr(float []data1, float[] data2){
 
         int len = (int)Math.ceil((float)(data1.length+data2.length)/2)*2;
         float[] hData1 = new float[len];
@@ -93,10 +126,28 @@ public class Decoder implements FlagVar{
         for(int i=0;i<corr.length;i++){
             corr[i] = Math.abs(result[i]);
         }
+        return corr;
+    }
 
-
-
-        return indexMaxVarInfo;
+    /** corr is the correlation array, chirpLength is the chirp signal's length. return the postion of the max correlation.
+     * @auther Ruinan Jin
+     * @param corr
+     * @param chirpLength
+     * @return
+     */
+    public int getMaxPosFromCorrFloat(float [] corr, int chirpLength){
+        float max = 0;
+        int index = 0;
+        for(int i=0;i<corr.length;i++){
+            if(corr[i]>max){
+                max = corr[i];
+                index = i;
+            }
+        }
+        if(index+chirpLength>corr.length){
+            index = index-corr.length;
+        }
+        return index;
     }
 
     /**
@@ -105,11 +156,12 @@ public class Decoder implements FlagVar{
      * @param reference: reference signal
      * @return: return the max value and its index
      */
-    public IndexMaxVarInfo xcorrFast(short s[], short[] reference){
-        IndexMaxVarInfo indexMaxVarInfo = new IndexMaxVarInfo();
+    public IndexMaxVarInfo getIndexMaxVarInfoFromSignals(short s[], short[] reference){
+        float[] data1 = normalization(s);
+        float[] data2 = normalization(reference);
 
-        // TODO here: implementation of xcorr details
-        // TODO : should call xcorrFastBasic
+        IndexMaxVarInfo indexMaxVarInfo = getIndexMaxVarInfoFromFloats(data1,data2);
+
         return indexMaxVarInfo;
     }
 
@@ -121,50 +173,46 @@ public class Decoder implements FlagVar{
      * @param reference - reference signal
      * @return correlation results with maximum value and its index
      */
-    public IndexMaxVarInfo xcorrFast(short s[], int low, int high, short[] reference){
-        IndexMaxVarInfo indexMaxVarInfo = new IndexMaxVarInfo();
-
-        // TODO here: implementation of xcorr details
-
+    public IndexMaxVarInfo getIndexMaxVarInfoFromSignals(short s[], int low, int high, short[] reference){
+        short[] s0 = new short[high-low+1];
+        for(int i=low;i<=high;i++){
+            s0[i-low] = s[i];
+        }
+        IndexMaxVarInfo indexMaxVarInfo = getIndexMaxVarInfoFromSignals(s0,reference);
         return indexMaxVarInfo;
     }
 
 
-    public short[] xcorrBasic(float s[], int low, int high, float[] reference){
-
-        short[] samples = new short[1];
-
-        // TODO here: implementation of xcorr details
-
-        return samples;
+    public float[] xcorr(float s[], int low, int high, float[] reference){
+        float[] s0 = new float[high-low+1];
+        for(int i=low;i<=high;i++){
+            s0[i-low] = s[i];
+        }
+        return xcorr(s0,reference);
     }
 
-    public short[] xcorrFastBasic(short s[], int low, int high, short[] reference){
-
-        short[] samples = new short[1];
-
-        // TODO here: implementation of xcorr details
-
-        return samples;
+    public float[] xcorrSignal(short s[], int low, int high, short[] reference){
+        float[] s0 = normalization(s);
+        float[] r0 = normalization(reference);
+        return xcorr(s0,low,high,r0);
     }
 
     /**
      * detect whether the preamble exist
-     * @param s - input sample signal
-     * @param reference - reference signal, can be either up and down preamble
+     * @param corr - correlation array
+     * @param indexMaxVarInfo - the info of the max corr index
      * @return true indicate the presence of the corresponding preamble and vise versa
      */
-    public IndexMaxVarInfo preambleDetection(short[] s, short[] reference){
-        IndexMaxVarInfo indexMaxVarInfo = xcorrFast(s, reference);
+    public IndexMaxVarInfo preambleDetection(float[] corr, IndexMaxVarInfo indexMaxVarInfo){
         indexMaxVarInfo.isReferenceSignalExist = false;
-        if(indexMaxVarInfo.maxVar > FlagVar.preambleDetectionThreshold) {
+//        if(indexMaxVarInfo.maxVar > FlagVar.preambleDetectionThreshold) {
             // use the ratio of peak value to the mean value of its previous 200 samples
-            int startIndex = indexMaxVarInfo.index - numberOfPreviousSamples;
-            if(startIndex < 0) startIndex = 0;  // in case the preamble exist in the head of the buffer
-            float ratio = indexMaxVarInfo.maxVar / Algorithm.meanValue(s, startIndex, indexMaxVarInfo.index);
-            if(ratio > ratioThreshold)
-                indexMaxVarInfo.isReferenceSignalExist = true;
+        int startIndex = indexMaxVarInfo.index - numberOfPreviousSamples;
+        float ratio = indexMaxVarInfo.maxVar / Algorithm.meanValue(corr, startIndex, indexMaxVarInfo.index);
+        if(ratio > ratioThreshold) {
+            indexMaxVarInfo.isReferenceSignalExist = true;
         }
+//        }
         return indexMaxVarInfo;
     }
 
@@ -180,20 +228,20 @@ public class Decoder implements FlagVar{
         int endIndex = startIndex + FlagVar.symbolLength - 1;
 
         float[] maxRatios = new float[numberOfSymbols];
-        short[] correlationResult = null;
+        float[] correlationResult = null;
         float max = 0;
-        int mean = 0;
+        float mean = 0;
         // use the max/mean ratio as the indicator for symbol decoding
         if(isUpSymbol) {
             for (int i = 0; i < numberOfSymbols; i++) {
-                correlationResult = xcorrFastBasic(s, startIndex, endIndex, upSymbolSamples[i]);
+                correlationResult = xcorrSignal(s, startIndex, endIndex, upSymbolSamples[i]);
                 max = Algorithm.getMaxInfo(correlationResult, 0, correlationResult.length).maxVar;
                 mean = Algorithm.meanValue(correlationResult, 0, correlationResult.length);
                 maxRatios[i] = max / mean;
             }
         }else{
             for (int i = 0; i < numberOfSymbols; i++) {
-                correlationResult = xcorrFastBasic(s, startIndex, endIndex, downSymbolSamples[i]);
+                correlationResult = xcorrSignal(s, startIndex, endIndex, downSymbolSamples[i]);
                 max = Algorithm.getMaxInfo(correlationResult, 0, correlationResult.length).maxVar;
                 mean = Algorithm.meanValue(correlationResult, 0, correlationResult.length);
                 maxRatios[i] = max / mean;
