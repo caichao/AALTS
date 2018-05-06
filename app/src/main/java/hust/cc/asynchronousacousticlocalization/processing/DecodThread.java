@@ -2,6 +2,7 @@ package hust.cc.asynchronousacousticlocalization.processing;
 
 import android.os.Handler;
 import android.os.Message;
+import android.util.Log;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
@@ -51,68 +52,90 @@ public class DecodThread extends Decoder implements Runnable{
 
     @Override
     public void run() {
-
-        while (isThreadRunning){
-            if(samplesList.size() >= 2){
-                synchronized (samplesList) {
+        try {
+            while (isThreadRunning) {
+                if (samplesList.size() >= 3) {
                     short[] bufferedSamples = new short[processBufferSize + FlagVar.beconMessageLength];
-                    for (int i = 0; i < beconMessageLength; i++) {
-                        bufferedSamples[i] = samplesList.get(0)[i];
+                    synchronized (samplesList) {
+
+                        for (int i = 0; i < LPreamble; i++) {
+                            bufferedSamples[i] = samplesList.get(0)[processBufferSize-LPreamble+i];
+                        }
+                        for (int i = LPreamble; i < processBufferSize + LPreamble; i++) {
+                            bufferedSamples[i] = samplesList.get(1)[i - LPreamble];
+                        }
+                        for (int i=processBufferSize+LPreamble;i<processBufferSize+beconMessageLength;i++){
+                            bufferedSamples[i] = samplesList.get(2)[i-processBufferSize-LPreamble];
+                        }
+                        samplesList.remove(0);
                     }
-                    for (int i = beconMessageLength; i < processBufferSize + beconMessageLength; i++) {
-                        bufferedSamples[i] = samplesList.get(1)[i - beconMessageLength];
+
+                    mLoopCounter++;
+
+                    // 1. the first step is to check the existence of preamble either up or down
+                    mIndexMaxVarInfo.isReferenceSignalExist = false;
+                    mIndexMaxVarInfo = getIndexMaxVarInfoFromSignals(bufferedSamples,0,processBufferSize+LPreamble-1, upPreamble);
+
+                    // 2. if the preamble exist, then decode the anchor ID
+                    if (mIndexMaxVarInfo.isReferenceSignalExist && !isSignalRepeatedDetected(mIndexMaxVarInfo,processBufferSize)) {
+                        mTDOACounter++;
+
+                        int anchorID = decodeAnchorID(bufferedSamples, true, mIndexMaxVarInfo);
+                        TDOAUtils tdoaUtils = new TDOAUtils();
+                        // store the timming information
+                        tdoaUtils.loopIndex = mLoopCounter;
+                        tdoaUtils.preambleType = FlagVar.UP_PREAMBLE;
+                        tdoaUtils.timeIndex = mIndexMaxVarInfo.index;
+                        tdoaUtils.TDOACounter = mTDOACounter;
+                        tdoaUtils.correspondingAnchorID = anchorID;
+
+                        preambleInfoList.add(tdoaUtils);
+
                     }
-                }
 
-                mLoopCounter ++;
-                // 1. the first step is to check the existence of preamble either up or down
-                mIndexMaxVarInfo.isReferenceSignalExist = false;
-                mIndexMaxVarInfo = getIndexMaxVarInfoFromSignals(bufferedSamples, upPreamble);
+                    // 3. check the down preamble and do the above operation again
+                    mIndexMaxVarInfo.isReferenceSignalExist = false;
+                    mIndexMaxVarInfo = getIndexMaxVarInfoFromSignals(bufferedSamples, 0,processBufferSize+LPreamble-1,downPreamble);
+                    if (mIndexMaxVarInfo.isReferenceSignalExist && !isSignalRepeatedDetected(mIndexMaxVarInfo,processBufferSize)) {
+                        mTDOACounter++;
 
-                // 2. if the preamble exist, then decode the anchor ID
-                if(mIndexMaxVarInfo.isReferenceSignalExist){
-                    mTDOACounter ++;
+                        int anchorID = decodeAnchorID(bufferedSamples, false, mIndexMaxVarInfo);
+                        TDOAUtils tdoaUtils = new TDOAUtils();
 
-                    int anchorID = decodeAnchorID(bufferedSamples, true, mIndexMaxVarInfo);
-                    TDOAUtils tdoaUtils = new TDOAUtils();
-                    // store the timming information
-                    tdoaUtils.loopIndex = mLoopCounter;
-                    tdoaUtils.preambleType = FlagVar.UP_PREAMBLE;
-                    tdoaUtils.timeIndex = mIndexMaxVarInfo.index;
-                    tdoaUtils.TDOACounter = mTDOACounter;
-                    tdoaUtils.correspondingAnchorID = anchorID;
+                        tdoaUtils.loopIndex = mLoopCounter;
+                        tdoaUtils.preambleType = FlagVar.DOWN_PREAMBLE;
+                        tdoaUtils.timeIndex = mIndexMaxVarInfo.index;
+                        tdoaUtils.TDOACounter = mTDOACounter;
+                        tdoaUtils.correspondingAnchorID = anchorID;
 
-                    preambleInfoList.add(tdoaUtils);
+                        preambleInfoList.add(tdoaUtils);
 
-                }
-
-                // 3. check the down preamble and do the above operation again
-                mIndexMaxVarInfo.isReferenceSignalExist = false;
-                mIndexMaxVarInfo = getIndexMaxVarInfoFromSignals(bufferedSamples, downPreamble);
-                if(mIndexMaxVarInfo.isReferenceSignalExist){
-                    mTDOACounter ++;
-
-                    int anchorID = decodeAnchorID(bufferedSamples, false, mIndexMaxVarInfo);
-                    TDOAUtils tdoaUtils = new TDOAUtils();
-
-                    tdoaUtils.loopIndex = mLoopCounter;
-                    tdoaUtils.preambleType = FlagVar.DOWN_PREAMBLE;
-                    tdoaUtils.timeIndex = mIndexMaxVarInfo.index;
-                    tdoaUtils.TDOACounter = mTDOACounter;
-                    tdoaUtils.correspondingAnchorID = anchorID;
-
-                    preambleInfoList.add(tdoaUtils);
-
-                }
-
-                // 4. process the TDOA time information
-                if(mTDOACounter >= 2) {// receive two TDOA timming information
-                    if(mTDOACounter == 3){
-                        preambleInfoList.pollFirst();
                     }
-                    processTDOAInformation();
+
+                    int tdoa = Integer.MIN_VALUE;
+                    // 4. process the TDOA time information
+                    if (mTDOACounter >= 2) {// receive two TDOA timming information
+                        if (mTDOACounter == 3) {
+                            preambleInfoList.pollFirst();
+                        }
+                        tdoa = processTDOAInformation();
+                    }
+
+                    Log.v("","mLoopCounter:"+mLoopCounter);
+                    System.out.println("mLoopCounter:"+mLoopCounter);
+                    if(mLoopCounter > 300){
+                        Log.v("","buffer samples size >= 300");
+                        System.out.println("buffer samples size >= 300");
+                        return;
+                    }
+                    if(Math.abs(tdoa)>1000 && Math.abs(tdoa) < 200000){
+                        System.out.println(tdoa);Log.v("","tdoa:"+tdoa);
+                        System.out.println("tdoa:"+tdoa);
+                    }
                 }
             }
+        }catch (Exception e){
+            e.printStackTrace();
         }
 
     }
@@ -120,7 +143,7 @@ public class DecodThread extends Decoder implements Runnable{
     /*
     obtain TDOA information from the preambleInfoList
      */
-    private void processTDOAInformation(){
+    private int processTDOAInformation(){
         // remove the first anchor information
         TDOAUtils mFirstAnchorInfo = preambleInfoList.pollFirst();
         // peek the last one
@@ -129,20 +152,25 @@ public class DecodThread extends Decoder implements Runnable{
         // if the preamble type of the two decode information is not the same, then we can get the tdoa information
         if(mFirstAnchorInfo.preambleType != mSecondAnchorInfo.preambleType){
             // post the information to the main thread
+            int tdoa = (mFirstAnchorInfo.loopIndex - mSecondAnchorInfo.loopIndex) * processBufferSize + mFirstAnchorInfo.timeIndex - mSecondAnchorInfo.timeIndex;
+            if(tdoa > beconMessageLength){
+                mTDOACounter = 1;
+                return tdoa;
+            }
+            mTDOACounter = 0;
+            preambleInfoList.removeFirst();
             Message message = mHandler.obtainMessage();
             message.what = FlagVar.MESSAGE_TDOA;
-
-
-            int tdoa = (mFirstAnchorInfo.loopIndex - mSecondAnchorInfo.loopIndex) * processBufferSize + mFirstAnchorInfo.timeIndex - mSecondAnchorInfo.timeIndex;
             message.arg1 = tdoa;
             // the first four bits store the first anchor id, the last four bit store the second anchor ID
             message.arg2 = mFirstAnchorInfo.correspondingAnchorID << 4 | mSecondAnchorInfo.correspondingAnchorID;
 
             mHandler.sendMessage(message);
+            return tdoa;
 
         } else{
             mTDOACounter = 1;
-            preambleInfoList.pollFirst(); // remove the first preamble
+            return Integer.MAX_VALUE;
         }
     }
 

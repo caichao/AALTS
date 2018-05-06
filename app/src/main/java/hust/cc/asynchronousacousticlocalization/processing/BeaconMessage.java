@@ -12,7 +12,7 @@ public class BeaconMessage {
      * @return
      */
     public short[] BeaconMessage(int anchorID, int type){
-        short[] samples = new short[FlagVar.preambleLength + FlagVar.guardIntervalLength + FlagVar.symbolLength];
+        short[] samples = new short[FlagVar.LPreamble + FlagVar.guardIntervalLength + FlagVar.LSymbol];
         if(type == 0){
             short[] preamble = SignalGenerator.upChirpGenerator(FlagVar.Fs, FlagVar.TPreamble, FlagVar.BPreamble, FlagVar.Fmin);
             short[] symbol = anchorIDEncoding(anchorID, 0);

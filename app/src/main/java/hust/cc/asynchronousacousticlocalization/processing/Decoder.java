@@ -1,7 +1,10 @@
 package hust.cc.asynchronousacousticlocalization.processing;
 
+import android.util.Log;
+
 import org.jtransforms.fft.FloatFFT_1D;
 
+import hust.cc.asynchronousacousticlocalization.physical.AudioRecorder;
 import hust.cc.asynchronousacousticlocalization.physical.SignalGenerator;
 import hust.cc.asynchronousacousticlocalization.utils.FlagVar;
 
@@ -73,7 +76,7 @@ public class Decoder implements FlagVar{
         float[] corr = xcorr(data1,data2);
         int index = getMaxPosFromCorrFloat(corr,data2.length);
         indexMaxVarInfo.index = index;
-        indexMaxVarInfo.maxVar = corr[index];
+        indexMaxVarInfo.maxVar = corr[(index+corr.length)%corr.length];
 
         IndexMaxVarInfo resultInfo = preambleDetection(corr,indexMaxVarInfo);
         return resultInfo;
@@ -224,8 +227,20 @@ public class Decoder implements FlagVar{
      * @return the decoded anchor ID
      */
     public int decodeAnchorID(short[] s, boolean isUpSymbol, IndexMaxVarInfo p){
-        int startIndex = p.index + FlagVar.preambleLength + FlagVar.guardIntervalLength;
-        int endIndex = startIndex + FlagVar.symbolLength - 1;
+        int startIndex = p.index + FlagVar.LPreamble + FlagVar.guardIntervalLength;
+        int endIndex = startIndex + FlagVar.LSymbol - 1;
+
+        if(endIndex>FlagVar.beconMessageLength+ AudioRecorder.getBufferSize()){
+            System.out.println("endIndex:"+endIndex);
+            StringBuilder sb = new StringBuilder();
+            for(int i=0;i<s.length;i++){
+                sb.append(s[i]).append(",");
+                if(i%600 == 0){
+                    sb.append("\n");
+                }
+            }
+            System.out.println("data:"+sb.toString());
+        }
 
         float[] maxRatios = new float[numberOfSymbols];
         float[] correlationResult = null;
@@ -255,6 +270,15 @@ public class Decoder implements FlagVar{
                 decodeID = i;
         }
         return decodeID;
+    }
+
+    public boolean isSignalRepeatedDetected(IndexMaxVarInfo indexMaxVarInfo, int bufferLen){
+        int index = indexMaxVarInfo.index;
+        if(index >= bufferLen){
+            return true;
+        }else{
+            return false;
+        }
     }
 
 }

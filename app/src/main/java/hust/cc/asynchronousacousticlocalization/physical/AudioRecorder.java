@@ -8,6 +8,8 @@ import android.util.Log;
 
 import java.io.FileNotFoundException;
 
+import hust.cc.asynchronousacousticlocalization.utils.FlagVar;
+
 /**
  * Created by cc on 2016/10/12.
  */
@@ -96,6 +98,7 @@ public class AudioRecorder implements IAudioRecorder{
                     short recordBuffer[] = new short[bufferSize];
                     do {
                         int len = recorder.read(recordBuffer, 0, bufferSize);
+//                        Log.e("","len:"+len+"  bufferSize:"+bufferSize+" signalLen:"+ FlagVar.beconMessageLength);
 
                         if (len > 0) {
                             recordingCallback.onDataReady(recordBuffer,len);

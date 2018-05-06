@@ -4,6 +4,7 @@ import android.os.Handler;
 import android.os.Message;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
@@ -49,10 +50,14 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
         recvButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if(!audioRecorder.isRecording()) {
-                    audioRecorder.startRecord();
-                }else{
-                    audioRecorder.finishRecord();
+                try {
+                    if (!audioRecorder.isRecording()) {
+                        audioRecorder.startRecord();
+                    } else {
+                        audioRecorder.finishRecord();
+                    }
+                }catch (Exception e){
+                    e.printStackTrace();
                 }
             }
         });
@@ -75,7 +80,11 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
     // here we process the received audio samples
     @Override
     public void onDataReady(short[] data, int len) {
-        decodThread.fillSamples(data);
+        if (decodThread.samplesList.size() < 300) {
+            decodThread.fillSamples(data);
+        }
+
+
     }
 
     // here we process the received message from the server

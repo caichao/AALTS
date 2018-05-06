@@ -1,5 +1,7 @@
 package hust.cc.asynchronousacousticlocalization.utils;
 
+import java.math.BigDecimal;
+
 public interface FlagVar {
 
     //sampling rate
@@ -28,19 +30,17 @@ public interface FlagVar {
     public int BPreamble = 4000;
     public int Fmin = 17500;
     public int Fmax = 21500;
-    public int preambleLength = (int)(Fs * TPreamble);
 
     // parameter for the symbols
     public float TSymbol = 0.03f;
     public int BSymbol = 1000;
     public int [] FUpSymbol = new int[]{17500, 18500, 19500, 20500};
     public int [] FDownSymbol = new int[]{21500, 20500, 19500, 18500};
-    public final int symbolLength = (int)(Fs * TSymbol);
     public int numberOfSymbols = 4;
 
     // guard interval
     public float guardInterval = 0.005f;
-    public int guardIntervalLength = (int)(guardInterval * Fs);
+    public int guardIntervalLength = (int)(new BigDecimal(guardInterval * Fs).setScale(0, BigDecimal.ROUND_HALF_UP).floatValue());
 
     /*****************************************************/
 
@@ -52,7 +52,9 @@ public interface FlagVar {
 
     //becon message
     float beconMessageTime = TPreamble+guardInterval+TSymbol;
-    int beconMessageLength = (int)(beconMessageTime*Fs);
+    int LPreamble = (int)(new BigDecimal(TPreamble*Fs).setScale(0, BigDecimal.ROUND_HALF_UP).floatValue());
+    int LSymbol = (int)(new BigDecimal(TSymbol*Fs).setScale(0, BigDecimal.ROUND_HALF_UP).floatValue());
+    int beconMessageLength = (int)(new BigDecimal(beconMessageTime*Fs).setScale(0, BigDecimal.ROUND_HALF_UP).floatValue());
 
 
 }
