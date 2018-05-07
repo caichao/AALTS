@@ -91,7 +91,7 @@ public class Algorithm {
     public static float meanValue(float[] s, int low, int high){
         long sum = 0;
         for(int i = low ; i < high ; i++){
-            sum += s[i];
+            sum += s[(i+s.length)%s.length];
         }
         sum /= (high - low + 1);
         return sum;
