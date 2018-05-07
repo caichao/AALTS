@@ -71,10 +71,13 @@ public class DecodThread extends Decoder implements Runnable{
                     }
 
                     mLoopCounter++;
+                    //compute the fft of the bufferedSamples, it will be used twice. It's computed here to reduce time cost.
+                    float[] fft = getData1FFtFromSignals(bufferedSamples,0,processBufferSize+LPreamble-1, upPreamble.length);
 
                     // 1. the first step is to check the existence of preamble either up or down
                     mIndexMaxVarInfo.isReferenceSignalExist = false;
-                    mIndexMaxVarInfo = getIndexMaxVarInfoFromSignals(bufferedSamples,0,processBufferSize+LPreamble-1, upPreamble);
+                    mIndexMaxVarInfo = getIndexMaxVarInfoFromFAndTDomain(fft,upPreamble);
+//                    mIndexMaxVarInfo = getIndexMaxVarInfoFromSignals(bufferedSamples,0,processBufferSize+LPreamble-1, upPreamble);
 
                     // 2. if the preamble exist, then decode the anchor ID
                     if (mIndexMaxVarInfo.isReferenceSignalExist && !isSignalRepeatedDetected(mIndexMaxVarInfo,processBufferSize)) {
@@ -95,7 +98,8 @@ public class DecodThread extends Decoder implements Runnable{
 
                     // 3. check the down preamble and do the above operation again
                     mIndexMaxVarInfo.isReferenceSignalExist = false;
-                    mIndexMaxVarInfo = getIndexMaxVarInfoFromSignals(bufferedSamples, 0,processBufferSize+LPreamble-1,downPreamble);
+                    mIndexMaxVarInfo = getIndexMaxVarInfoFromFAndTDomain(fft,downPreamble);
+//                    mIndexMaxVarInfo = getIndexMaxVarInfoFromSignals(bufferedSamples, 0,processBufferSize+LPreamble-1,downPreamble);
                     if (mIndexMaxVarInfo.isReferenceSignalExist && !isSignalRepeatedDetected(mIndexMaxVarInfo,processBufferSize)) {
                         mTDOACounter++;
 
@@ -121,15 +125,14 @@ public class DecodThread extends Decoder implements Runnable{
                         tdoa = processTDOAInformation();
                     }
 
-                    Log.v("","mLoopCounter:"+mLoopCounter);
+                    System.out.println("zize:"+samplesList.size());
                     System.out.println("mLoopCounter:"+mLoopCounter);
                     if(mLoopCounter > 300){
                         Log.v("","buffer samples size >= 300");
                         System.out.println("buffer samples size >= 300");
                         return;
                     }
-                    if(Math.abs(tdoa)>1000 && Math.abs(tdoa) < 200000){
-                        System.out.println(tdoa);Log.v("","tdoa:"+tdoa);
+                    if(Math.abs(tdoa)>30 && Math.abs(tdoa) < 200000){
                         System.out.println("tdoa:"+tdoa);
                     }
                 }
@@ -153,7 +156,7 @@ public class DecodThread extends Decoder implements Runnable{
         if(mFirstAnchorInfo.preambleType != mSecondAnchorInfo.preambleType){
             // post the information to the main thread
             int tdoa = (mFirstAnchorInfo.loopIndex - mSecondAnchorInfo.loopIndex) * processBufferSize + mFirstAnchorInfo.timeIndex - mSecondAnchorInfo.timeIndex;
-            if(tdoa > beconMessageLength){
+            if(Math.abs(tdoa) > beconMessageLength){
                 mTDOACounter = 1;
                 return tdoa;
             }

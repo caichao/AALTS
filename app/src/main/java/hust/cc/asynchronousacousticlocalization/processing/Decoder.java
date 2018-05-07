@@ -63,6 +63,14 @@ public class Decoder implements FlagVar{
         return normalized;
     }
 
+    public float[] normalization(short s[], int low, int high){
+        float[] normalized = new float[high-low+1];
+        for(int i=low;i<=high;i++){
+            normalized[i-low] = (float)(s[i])/32768;
+        }
+        return normalized;
+    }
+
 
     /**
      * correlation results, return both the max value and its index
@@ -71,9 +79,9 @@ public class Decoder implements FlagVar{
      * @return: return the max value and its index
      */
 
-    public IndexMaxVarInfo getIndexMaxVarInfoFromFloats(float[] data1,float[] data2){
+    public IndexMaxVarInfo getIndexMaxVarInfoFromFloats(float[] data1,float[] data2, boolean isData1FDomainSignal){
         IndexMaxVarInfo indexMaxVarInfo = new IndexMaxVarInfo();
-        float[] corr = xcorr(data1,data2);
+        float[] corr = xcorrFast(data1,data2,isData1FDomainSignal);
         int index = getMaxPosFromCorrFloat(corr,data2.length);
         indexMaxVarInfo.index = index;
         indexMaxVarInfo.maxVar = corr[(index+corr.length)%corr.length];
@@ -132,6 +140,72 @@ public class Decoder implements FlagVar{
         return corr;
     }
 
+    public static float[] xcorrFast(float []data1, float[] data2, boolean isData1FDomainSignal){
+
+        int len = 1;
+        if(!isData1FDomainSignal) {
+            while (len < data1.length + data2.length) {
+                len = len * 2;
+            }
+        }else{
+            len = data1.length;
+        }
+        float[] hData1 = null;
+        float[] hData2 = null;
+        float[] result = new float[len];
+        float[] corr = new float[len];
+        FloatFFT_1D fft = new FloatFFT_1D(len);
+
+        if(!isData1FDomainSignal) {
+            hData1 = new float[len];
+            hData2 = new float[len];
+            for (int i = 0; i < len; i++) {
+                if (i < data1.length) {
+                    hData1[i] = data1[i];
+                } else {
+                    hData1[i] = 0;
+                }
+                if (i < data2.length) {
+                    hData2[i] = data2[i];
+                } else {
+                    hData2[i] = 0;
+                }
+            }
+
+            fft.realForward(hData1);
+            fft.realForward(hData2);
+        }else{
+            hData1 = data1;
+            hData2 = new float[len];
+            for (int i = 0; i < len; i++) {
+                if (i < data2.length) {
+                    hData2[i] = data2[i];
+                } else {
+                    hData2[i] = 0;
+                }
+            }
+            fft.realForward(hData2);
+
+        }
+
+        result[0] = hData1[0] * hData2[0]; // value at f=0Hz is real-valued
+        result[1] = hData1[1] * hData2[1]; // value at f=fs/2 is real-valued and packed at index 1
+        for (int i = 1 ; i < result.length / 2 ; ++i) {
+            float a = hData1[2*i];
+            float b = hData1[2*i + 1];
+            float c = hData2[2*i];
+            float d = hData2[2*i + 1];
+
+            result[2*i]     = a*c + b*d;
+            result[2*i + 1] = b*c - a*d;
+        }
+        fft.realInverse(result, true);
+        for(int i=0;i<corr.length;i++){
+            corr[i] = Math.abs(result[i]);
+        }
+        return corr;
+    }
+
     /** corr is the correlation array, chirpLength is the chirp signal's length. return the postion of the max correlation.
      * @auther Ruinan Jin
      * @param corr
@@ -163,8 +237,14 @@ public class Decoder implements FlagVar{
         float[] data1 = normalization(s);
         float[] data2 = normalization(reference);
 
-        IndexMaxVarInfo indexMaxVarInfo = getIndexMaxVarInfoFromFloats(data1,data2);
+        IndexMaxVarInfo indexMaxVarInfo = getIndexMaxVarInfoFromFloats(data1,data2,false);
 
+        return indexMaxVarInfo;
+    }
+
+    public IndexMaxVarInfo getIndexMaxVarInfoFromFAndTDomain(float[] sf, short[] reference){
+        float[] data2 = normalization(reference);
+        IndexMaxVarInfo indexMaxVarInfo = getIndexMaxVarInfoFromFloats(sf,data2,true);
         return indexMaxVarInfo;
     }
 
@@ -191,13 +271,42 @@ public class Decoder implements FlagVar{
         for(int i=low;i<=high;i++){
             s0[i-low] = s[i];
         }
-        return xcorr(s0,reference);
+        return xcorrFast(s0,reference,false);
     }
+
 
     public float[] xcorrSignal(short s[], int low, int high, short[] reference){
         float[] s0 = normalization(s);
         float[] r0 = normalization(reference);
         return xcorr(s0,low,high,r0);
+    }
+
+
+    public float[] getData1FFtFromSignals(short[] data1, int data2Len){
+        int len = 1;
+        while(len < data1.length+data2Len){
+            len = len*2;
+        }
+        FloatFFT_1D fft = new FloatFFT_1D(len);
+        float[] hData1 = new float[len];
+        for(int i=0;i<len;i++){
+            if(i<data1.length){
+                hData1[i] = (float) data1[i]/32768;
+            }else{
+                hData1[i] = 0;
+            }
+        }
+        fft.realForward(hData1);
+        return hData1;
+    }
+
+
+    public float[] getData1FFtFromSignals(short[] data1,int low, int high, int data2Len){
+        short[] data0 = new short[high-low+1];
+        for(int i=low;i<=high;i++){
+            data0[i-low] = data1[i];
+        }
+        return getData1FFtFromSignals(data0,data2Len);
     }
 
     /**
@@ -230,6 +339,7 @@ public class Decoder implements FlagVar{
         int startIndex = p.index + FlagVar.LPreamble + FlagVar.guardIntervalLength;
         int endIndex = startIndex + FlagVar.LSymbol - 1;
 
+        //debug
         if(endIndex>FlagVar.beconMessageLength+ AudioRecorder.getBufferSize()){
             System.out.println("endIndex:"+endIndex);
             StringBuilder sb = new StringBuilder();
@@ -242,21 +352,25 @@ public class Decoder implements FlagVar{
             System.out.println("data:"+sb.toString());
         }
 
+
         float[] maxRatios = new float[numberOfSymbols];
         float[] correlationResult = null;
+        float[] fft = getData1FFtFromSignals(s,startIndex,endIndex,upSymbolSamples[0].length);;
         float max = 0;
         float mean = 0;
         // use the max/mean ratio as the indicator for symbol decoding
         if(isUpSymbol) {
             for (int i = 0; i < numberOfSymbols; i++) {
-                correlationResult = xcorrSignal(s, startIndex, endIndex, upSymbolSamples[i]);
+                correlationResult = xcorrFast(fft,normalization(upSymbolSamples[i]),true);
+//                correlationResult = xcorrSignal(s, startIndex, endIndex, upSymbolSamples[i]);
                 max = Algorithm.getMaxInfo(correlationResult, 0, correlationResult.length).maxVar;
                 mean = Algorithm.meanValue(correlationResult, 0, correlationResult.length);
                 maxRatios[i] = max / mean;
             }
         }else{
             for (int i = 0; i < numberOfSymbols; i++) {
-                correlationResult = xcorrSignal(s, startIndex, endIndex, downSymbolSamples[i]);
+                correlationResult = xcorrFast(fft,normalization(downSymbolSamples[i]),true);
+//                correlationResult = xcorrSignal(s, startIndex, endIndex, downSymbolSamples[i]);
                 max = Algorithm.getMaxInfo(correlationResult, 0, correlationResult.length).maxVar;
                 mean = Algorithm.meanValue(correlationResult, 0, correlationResult.length);
                 maxRatios[i] = max / mean;
@@ -280,5 +394,6 @@ public class Decoder implements FlagVar{
             return false;
         }
     }
+
 
 }

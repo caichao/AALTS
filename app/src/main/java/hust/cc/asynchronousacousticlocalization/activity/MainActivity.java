@@ -84,7 +84,6 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
             decodThread.fillSamples(data);
         }
 
-
     }
 
     // here we process the received message from the server
