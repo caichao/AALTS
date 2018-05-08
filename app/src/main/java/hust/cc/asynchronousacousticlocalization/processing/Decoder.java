@@ -4,6 +4,8 @@ import android.util.Log;
 
 import org.jtransforms.fft.FloatFFT_1D;
 
+import java.util.Date;
+
 import hust.cc.asynchronousacousticlocalization.physical.AudioRecorder;
 import hust.cc.asynchronousacousticlocalization.physical.SignalGenerator;
 import hust.cc.asynchronousacousticlocalization.utils.FlagVar;
@@ -171,9 +173,11 @@ public class Decoder implements FlagVar{
                     hData2[i] = 0;
                 }
             }
-
+            Date date1 = new Date();
             fft.realForward(hData1);
             fft.realForward(hData2);
+            Date date2 = new Date();
+            System.out.println("2 fft time:"+(date2.getTime()-date1.getTime()));
         }else{
             hData1 = data1;
             hData2 = new float[len];
@@ -184,8 +188,10 @@ public class Decoder implements FlagVar{
                     hData2[i] = 0;
                 }
             }
+            Date date1 = new Date();
             fft.realForward(hData2);
-
+            Date date2 = new Date();
+            System.out.println("1 fft time:"+(date2.getTime()-date1.getTime()));
         }
 
         result[0] = hData1[0] * hData2[0]; // value at f=0Hz is real-valued
@@ -199,7 +205,10 @@ public class Decoder implements FlagVar{
             result[2*i]     = a*c + b*d;
             result[2*i + 1] = b*c - a*d;
         }
+        Date date1 = new Date();
         fft.realInverse(result, true);
+        Date date2 = new Date();
+        System.out.println("1 ifft time:"+(date2.getTime()-date1.getTime()));
         for(int i=0;i<corr.length;i++){
             corr[i] = Math.abs(result[i]);
         }
@@ -296,7 +305,10 @@ public class Decoder implements FlagVar{
                 hData1[i] = 0;
             }
         }
+        Date date1 = new Date();
         fft.realForward(hData1);
+        Date date2 = new Date();
+        System.out.println("1 fft time:"+(date2.getTime()-date1.getTime()));
         return hData1;
     }
 

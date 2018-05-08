@@ -5,6 +5,7 @@ import android.os.Message;
 import android.util.Log;
 
 import java.util.ArrayDeque;
+import java.util.Date;
 import java.util.Deque;
 import java.util.LinkedList;
 import java.util.List;
@@ -55,6 +56,7 @@ public class DecodThread extends Decoder implements Runnable{
         try {
             while (isThreadRunning) {
                 if (samplesList.size() >= 3) {
+                    Date dateS = new Date();
                     short[] bufferedSamples = new short[processBufferSize + FlagVar.beconMessageLength];
                     synchronized (samplesList) {
 
@@ -69,21 +71,31 @@ public class DecodThread extends Decoder implements Runnable{
                         }
                         samplesList.remove(0);
                     }
+                    Date dateSS = new Date();
+                    System.out.println("dateSS-dateS time:"+(dateSS.getTime()-dateS.getTime()));
 
                     mLoopCounter++;
                     //compute the fft of the bufferedSamples, it will be used twice. It's computed here to reduce time cost.
+                    Date date1 = new Date();
                     float[] fft = getData1FFtFromSignals(bufferedSamples,0,processBufferSize+LPreamble-1, upPreamble.length);
+                    Date date2 = new Date();
+                    System.out.println("getData1FFtFromSignals time:"+(date2.getTime()-date1.getTime()));
 
                     // 1. the first step is to check the existence of preamble either up or down
                     mIndexMaxVarInfo.isReferenceSignalExist = false;
+                    date1 = new Date();
                     mIndexMaxVarInfo = getIndexMaxVarInfoFromFAndTDomain(fft,upPreamble);
+                    date2 = new Date();
+                    System.out.println("getIndexMaxVarInfoFromFAndTDomain time:"+(date2.getTime()-date1.getTime()));
 //                    mIndexMaxVarInfo = getIndexMaxVarInfoFromSignals(bufferedSamples,0,processBufferSize+LPreamble-1, upPreamble);
 
                     // 2. if the preamble exist, then decode the anchor ID
                     if (mIndexMaxVarInfo.isReferenceSignalExist && !isSignalRepeatedDetected(mIndexMaxVarInfo,processBufferSize)) {
                         mTDOACounter++;
-
+                        date1 = new Date();
                         int anchorID = decodeAnchorID(bufferedSamples, true, mIndexMaxVarInfo);
+                        date2 = new Date();
+                        System.out.println("decodeAnchorID time:"+(date2.getTime()-date1.getTime()));
                         TDOAUtils tdoaUtils = new TDOAUtils();
                         // store the timming information
                         tdoaUtils.loopIndex = mLoopCounter;
@@ -98,14 +110,19 @@ public class DecodThread extends Decoder implements Runnable{
 
                     // 3. check the down preamble and do the above operation again
                     mIndexMaxVarInfo.isReferenceSignalExist = false;
+                    date1 = new Date();
                     mIndexMaxVarInfo = getIndexMaxVarInfoFromFAndTDomain(fft,downPreamble);
+                    date2 = new Date();
+                    System.out.println("getIndexMaxVarInfoFromFAndTDomain time:"+(date2.getTime()-date1.getTime()));
 //                    mIndexMaxVarInfo = getIndexMaxVarInfoFromSignals(bufferedSamples, 0,processBufferSize+LPreamble-1,downPreamble);
                     if (mIndexMaxVarInfo.isReferenceSignalExist && !isSignalRepeatedDetected(mIndexMaxVarInfo,processBufferSize)) {
                         mTDOACounter++;
-
+                        date1 = new Date();
                         int anchorID = decodeAnchorID(bufferedSamples, false, mIndexMaxVarInfo);
-                        TDOAUtils tdoaUtils = new TDOAUtils();
+                        date2 = new Date();
+                        System.out.println("decodeAnchorID time:"+(date2.getTime()-date1.getTime()));
 
+                        TDOAUtils tdoaUtils = new TDOAUtils();
                         tdoaUtils.loopIndex = mLoopCounter;
                         tdoaUtils.preambleType = FlagVar.DOWN_PREAMBLE;
                         tdoaUtils.timeIndex = mIndexMaxVarInfo.index;
@@ -122,7 +139,10 @@ public class DecodThread extends Decoder implements Runnable{
                         if (mTDOACounter == 3) {
                             preambleInfoList.pollFirst();
                         }
+                        date1 = new Date();
                         tdoa = processTDOAInformation();
+                        date2 = new Date();
+                        System.out.println("processTDOAInformation time:"+(date2.getTime()-date1.getTime()));
                     }
 
                     System.out.println("zize:"+samplesList.size());
@@ -135,6 +155,8 @@ public class DecodThread extends Decoder implements Runnable{
                     if(Math.abs(tdoa)>30 && Math.abs(tdoa) < 200000){
                         System.out.println("tdoa:"+tdoa);
                     }
+                    Date dateE = new Date();
+                    System.out.println("one loop time:"+(dateE.getTime()-dateS.getTime()));
                 }
             }
         }catch (Exception e){
