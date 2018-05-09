@@ -1,5 +1,7 @@
 package hust.cc.asynchronousacousticlocalization.processing;
 
+import android.util.Log;
+
 import org.jtransforms.fft.FloatFFT_1D;
 
 import java.util.Date;
@@ -34,17 +36,24 @@ public class Decoder implements FlagVar{
     public FloatFFT_1D symbolDectectionFFT;
     public float[] preambleCorrResult;
     public float[] symbolCorrResult;
+    public short[] preambleSamples;
+    public short[] symbolSamples;
+    public float[] preambleFSamples;
+    public float[] symbolFSamples;
 
     public void setProcessBufferSize(int processBufferSize){
         this.processBufferSize = processBufferSize;
-        bufferedSamples = new short[processBufferSize];
-        normalizedSamples = new float[processBufferSize];
+        bufferedSamples = new short[processBufferSize+beconMessageLength];
         preambleCorrLen = getFFTLen(processBufferSize+LPreamble,LPreamble);
         symbolCorrLen = getFFTLen(LSymbol,LSymbol);
         preambleDetectionFFT = new FloatFFT_1D(preambleCorrLen);
         symbolDectectionFFT = new FloatFFT_1D(symbolCorrLen);
         preambleCorrResult = new float[preambleCorrLen];
         symbolCorrResult = new float[symbolCorrLen];
+        preambleSamples = new short[processBufferSize+LPreamble];
+        symbolSamples = new short[LSymbol];
+        preambleFSamples = new float[preambleCorrLen];
+        symbolFSamples = new float[symbolCorrLen];
 
     }
 
@@ -54,17 +63,8 @@ public class Decoder implements FlagVar{
         return processBufferSize;
     }
 
-    public short[] bufferedSamples = new short[processBufferSize];
-    public float[] normalizedSamples = new float[processBufferSize];
+    public short[] bufferedSamples = new short[processBufferSize+beconMessageLength];
 
-    /**
-     * refresh the buffer area
-     */
-    public void normalizeBufferSamples(){
-        for(int i = 0 ; i < processBufferSize ; i++){
-            normalizedSamples[i] = bufferedSamples[i] / 32768.0f;
-        }
-    }
 
     /**
      * normalize the short data to float array
@@ -98,9 +98,9 @@ public class Decoder implements FlagVar{
     public IndexMaxVarInfo getIndexMaxVarInfoFromFloats(float[] data1,float[] data2, boolean isData1FDomainSignal){
         IndexMaxVarInfo indexMaxVarInfo = new IndexMaxVarInfo();
         Date date1 = new Date();
-        float[] corr = xcorrFast(data1,data2,isData1FDomainSignal);
+        float[] corr = xcorr(data1,data2,isData1FDomainSignal);
         Date date2 = new Date();
-        System.out.println("corr time:"+(date2.getTime()-date1.getTime()));
+        Log.v("","corr time:"+(date2.getTime()-date1.getTime()));
         date1 = new Date();
         int index = getMaxPosFromCorrFloat(corr,data2.length);
         indexMaxVarInfo.index = index;
@@ -108,61 +108,13 @@ public class Decoder implements FlagVar{
 
         IndexMaxVarInfo resultInfo = preambleDetection(corr,indexMaxVarInfo);
         date2 = new Date();
-        System.out.println("preamble detection time:"+(date2.getTime()-date1.getTime()));
+        Log.v("","preamble detection time:"+(date2.getTime()-date1.getTime()));
         return resultInfo;
     }
 
 
 
-
-    /**
-     * calculate correlation results,
-     * @param data1: audio samples
-     * @param data2: reference signal
-     * @return: return the max value and its index
-     */
-    public float[] xcorr(float []data1, float[] data2){
-
-        int len = (int)Math.ceil((float)(data1.length+data2.length)/2)*2;
-        float[] hData1 = new float[len];
-        float[] hData2 = new float[len];
-        for(int i=0;i<len;i++){
-            if(i<data1.length){
-                hData1[i] = data1[i];
-            }else{
-                hData1[i] = 0;
-            }
-            if(i<data2.length){
-                hData2[i] = data2[i];
-            }else{
-                hData2[i] = 0;
-            }
-        }
-        float[] result = new float[len];
-        float[] corr = new float[data1.length+data2.length-1];
-        FloatFFT_1D fft = new FloatFFT_1D(len);
-        fft.realForward(hData1);
-        fft.realForward(hData2);
-
-        result[0] = hData1[0] * hData2[0]; // value at f=0Hz is real-valued
-        result[1] = hData1[1] * hData2[1]; // value at f=fs/2 is real-valued and packed at index 1
-        for (int i = 1 ; i < result.length / 2 ; ++i) {
-            float a = hData1[2*i];
-            float b = hData1[2*i + 1];
-            float c = hData2[2*i];
-            float d = hData2[2*i + 1];
-
-            result[2*i]     = a*c + b*d;
-            result[2*i + 1] = b*c - a*d;
-        }
-        fft.realInverse(result, true);
-        for(int i=0;i<corr.length;i++){
-            corr[i] = Math.abs(result[i]);
-        }
-        return corr;
-    }
-
-    public float[] xcorrFast(float []data1, float[] data2, boolean isData1FDomainSignal){
+    public float[] xcorr(float []data1, float[] data2, boolean isData1FDomainSignal){
 
         int len = 1;
         if(!isData1FDomainSignal) {
@@ -176,7 +128,7 @@ public class Decoder implements FlagVar{
         float[] result = getCorrArray(len);
         FloatFFT_1D fft = getFFT(len);
         Date date2 = new Date();
-        System.out.println("initialization time:"+(date2.getTime()-date1.getTime()));
+        Log.v("","initialization time:"+(date2.getTime()-date1.getTime()));
 
         if(!isData1FDomainSignal) {
             hData1 = new float[len];
@@ -199,14 +151,14 @@ public class Decoder implements FlagVar{
             fft.realForward(hData1);
             fft.realForward(hData2);
             date2 = new Date();
-            System.out.println("2 fft time:"+(date2.getTime()-date1.getTime()));
+            Log.v("","2 fft time:"+(date2.getTime()-date1.getTime()));
         }else{
             hData1 = data1;
             hData2 = new float[len];
             date1 = new Date();
             System.arraycopy(data2,0,hData2,0,data2.length);
             date2 = new Date();
-            System.out.println("arraycopy time:"+(date2.getTime()-date1.getTime()));
+            Log.v("","arraycopy time:"+(date2.getTime()-date1.getTime()));
 //            for (int i = 0; i < len; i++) {
 //                if (i < data2.length) {
 //                    hData2[i] = data2[i];
@@ -217,7 +169,7 @@ public class Decoder implements FlagVar{
             date1 = new Date();
             fft.realForward(hData2);
             date2 = new Date();
-            System.out.println("1 fft time:"+(date2.getTime()-date1.getTime()));
+            Log.v("","1 fft time:"+(date2.getTime()-date1.getTime()));
         }
 
         date1 = new Date();
@@ -233,17 +185,17 @@ public class Decoder implements FlagVar{
             result[2*i + 1] = b*c - a*d;
         }
         date2 = new Date();
-        System.out.println("1 corr compute time:"+(date2.getTime()-date1.getTime()));
+        Log.v("","1 corr compute time:"+(date2.getTime()-date1.getTime()));
         date1 = new Date();
         fft.realInverse(result, true);
         date2 = new Date();
-        System.out.println("1 ifft time:"+(date2.getTime()-date1.getTime()));
+        Log.v("","1 ifft time:"+(date2.getTime()-date1.getTime()));
         date1 = new Date();
         for(int i=0;i<result.length;i++){
             result[i] = Math.abs(result[i]);
         }
         date2 = new Date();
-        System.out.println("abs time:"+(date2.getTime()-date1.getTime()));
+        Log.v("","abs time:"+(date2.getTime()-date1.getTime()));
         return result;
     }
 
@@ -299,7 +251,7 @@ public class Decoder implements FlagVar{
         Date date1 = new Date();
         float[] data2 = normalization(reference);
         Date date2 = new Date();
-        System.out.println("normalization time:"+(date2.getTime()-date1.getTime()));
+        Log.v("","normalization time:"+(date2.getTime()-date1.getTime()));
         IndexMaxVarInfo indexMaxVarInfo = getIndexMaxVarInfoFromFloats(sf,data2,true);
         return indexMaxVarInfo;
     }
@@ -327,7 +279,7 @@ public class Decoder implements FlagVar{
         for(int i=low;i<=high;i++){
             s0[i-low] = s[i];
         }
-        return xcorrFast(s0,reference,false);
+        return xcorr(s0,reference,false);
     }
 
 
@@ -345,8 +297,7 @@ public class Decoder implements FlagVar{
         FloatFFT_1D fft = getFFT(len);
 
         Date date2 = new Date();
-//        System.out.println("getData1FFtFromSignals = time2:"+(date2.getTime()-date1.getTime()));
-        float[] hData1 = new float[len];
+        float[] hData1 = getFSamples(len);
         for(int i=0;i<len;i++){
             if(i<data1.length){
                 hData1[i] = (float) data1[i]/32768;
@@ -358,9 +309,23 @@ public class Decoder implements FlagVar{
         date1 = new Date();
         fft.realForward(hData1);
         date2 = new Date();
-        System.out.println("1 fft time:"+(date2.getTime()-date1.getTime()));
+        Log.v("","1 fft time:"+(date2.getTime()-date1.getTime()));
         return hData1;
     }
+
+    public float[] getFSamples(int len){
+        float[] fSamples;
+        if(len == preambleCorrLen) {
+            fSamples = preambleFSamples;
+        }else if(len == symbolCorrLen){
+            fSamples = symbolFSamples;
+        }else{
+            fSamples = new float[len];
+        }
+        return fSamples;
+    }
+
+
 
     public FloatFFT_1D getFFT(int len) {
         FloatFFT_1D fft;
@@ -385,15 +350,26 @@ public class Decoder implements FlagVar{
 
     public float[] getData1FFtFromSignals(short[] data1,int low, int high, int data2Len){
         Date date1 = new Date();
-        short[] data0 = new short[high-low+1];
+
+        short[] data0 = getPreSamples(high-low+1);
         System.arraycopy(data1,low,data0,0,high-low+1);
-//        for(int i=low;i<=high;i++){
-//            data0[i-low] = data1[i];
-//        }
         Date date2 = new Date();
-//        System.out.println("getData1FFtFromSignals = time1:"+(date2.getTime()-date1.getTime()));
+        Log.v("","getData1FFtFromSignals = time1:"+(date2.getTime()-date1.getTime()));
         return getData1FFtFromSignals(data0,data2Len);
     }
+
+    public short[] getPreSamples(int len){
+        short[] samples;
+        if(len == processBufferSize+LPreamble) {
+            samples = preambleSamples;
+        }else if(len == LSymbol){
+            samples = symbolSamples;
+        }else{
+            samples = new short[len];
+        }
+        return samples;
+    }
+
 
     /**
      * detect whether the preamble exist
@@ -427,7 +403,7 @@ public class Decoder implements FlagVar{
 
         //debug
         if(endIndex>FlagVar.beconMessageLength+ AudioRecorder.getBufferSize()){
-            System.out.println("endIndex:"+endIndex);
+            Log.v("","endIndex:"+endIndex);
             StringBuilder sb = new StringBuilder();
             for(int i=0;i<s.length;i++){
                 sb.append(s[i]).append(",");
@@ -435,7 +411,7 @@ public class Decoder implements FlagVar{
                     sb.append("\n");
                 }
             }
-            System.out.println("data:"+sb.toString());
+            Log.v("","data:"+sb.toString());
         }
 
 
@@ -447,7 +423,7 @@ public class Decoder implements FlagVar{
         // use the max/mean ratio as the indicator for symbol decoding
         if(isUpSymbol) {
             for (int i = 0; i < numberOfSymbols; i++) {
-                correlationResult = xcorrFast(fft,normalization(upSymbolSamples[i]),true);
+                correlationResult = xcorr(fft,normalization(upSymbolSamples[i]),true);
 //                correlationResult = xcorrSignal(s, startIndex, endIndex, upSymbolSamples[i]);
                 max = Algorithm.getMaxInfo(correlationResult, 0, correlationResult.length).maxVar;
                 mean = Algorithm.meanValue(correlationResult, 0, correlationResult.length);
@@ -455,7 +431,7 @@ public class Decoder implements FlagVar{
             }
         }else{
             for (int i = 0; i < numberOfSymbols; i++) {
-                correlationResult = xcorrFast(fft,normalization(downSymbolSamples[i]),true);
+                correlationResult = xcorr(fft,normalization(downSymbolSamples[i]),true);
 //                correlationResult = xcorrSignal(s, startIndex, endIndex, downSymbolSamples[i]);
                 max = Algorithm.getMaxInfo(correlationResult, 0, correlationResult.length).maxVar;
                 mean = Algorithm.meanValue(correlationResult, 0, correlationResult.length);
