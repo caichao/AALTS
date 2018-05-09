@@ -23,7 +23,7 @@ public class DecodThread extends Decoder implements Runnable{
     private Deque<TDOAUtils> preambleInfoList;
     private int mTDOACounter = 0;
     private Handler mHandler;
-    public List<Short[]> samplesList;
+    public List<short[]> samplesList;
 
     private IndexMaxVarInfo mIndexMaxVarInfo;
 
@@ -31,7 +31,7 @@ public class DecodThread extends Decoder implements Runnable{
         mIndexMaxVarInfo = new IndexMaxVarInfo();
         mTDOAUtils = new TDOAUtils();
         preambleInfoList = new ArrayDeque<>();
-        samplesList = new LinkedList<Short[]>();
+        samplesList = new LinkedList<short[]>();
         this.mHandler = mHandler;
     }
 
@@ -41,12 +41,8 @@ public class DecodThread extends Decoder implements Runnable{
      */
     public void fillSamples(short[] s){
 
-        Short[] samples = new Short[processBufferSize];
-        for(int i=0;i<samples.length;i++){
-            samples[i] = s[i];
-        }
         synchronized (samplesList) {
-            samplesList.add(samples);
+            samplesList.add(s);
         }
 
     }
@@ -59,8 +55,13 @@ public class DecodThread extends Decoder implements Runnable{
                     Date dateS = new Date();
                     short[] bufferedSamples = new short[processBufferSize + FlagVar.beconMessageLength];
                     synchronized (samplesList) {
+                        Date date1 = new Date();
+                        System.arraycopy(samplesList.get(0),processBufferSize-LPreamble,bufferedSamples,0,LPreamble);
+                        System.arraycopy(samplesList.get(1),0,bufferedSamples,LPreamble,processBufferSize);
+                        System.arraycopy(samplesList.get(2),0,bufferedSamples,processBufferSize+LPreamble,beconMessageLength-LPreamble);
 
-                        for (int i = 0; i < LPreamble; i++) {
+
+                        /*for (int i = 0; i < LPreamble; i++) {
                             bufferedSamples[i] = samplesList.get(0)[processBufferSize-LPreamble+i];
                         }
                         for (int i = LPreamble; i < processBufferSize + LPreamble; i++) {
@@ -68,8 +69,11 @@ public class DecodThread extends Decoder implements Runnable{
                         }
                         for (int i=processBufferSize+LPreamble;i<processBufferSize+beconMessageLength;i++){
                             bufferedSamples[i] = samplesList.get(2)[i-processBufferSize-LPreamble];
-                        }
+                        }*/
+                        Date date2 = new Date();
+                        System.out.println("sample list time:"+(date2.getTime()-date1.getTime()));
                         samplesList.remove(0);
+
                     }
                     Date dateSS = new Date();
                     System.out.println("dateSS-dateS time:"+(dateSS.getTime()-dateS.getTime()));

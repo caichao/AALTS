@@ -1,7 +1,5 @@
 package hust.cc.asynchronousacousticlocalization.processing;
 
-import android.util.Log;
-
 import org.jtransforms.fft.FloatFFT_1D;
 
 import java.util.Date;
@@ -30,11 +28,27 @@ public class Decoder implements FlagVar{
 
     public int processBufferSize = 9600;
 
+    public int preambleCorrLen = getFFTLen(processBufferSize+LPreamble,LPreamble);
+    public FloatFFT_1D preambleDetectionFFT;
+    public int symbolCorrLen = getFFTLen(LSymbol,LSymbol);
+    public FloatFFT_1D symbolDectectionFFT;
+    public float[] preambleCorrResult;
+    public float[] symbolCorrResult;
+
     public void setProcessBufferSize(int processBufferSize){
         this.processBufferSize = processBufferSize;
         bufferedSamples = new short[processBufferSize];
         normalizedSamples = new float[processBufferSize];
+        preambleCorrLen = getFFTLen(processBufferSize+LPreamble,LPreamble);
+        symbolCorrLen = getFFTLen(LSymbol,LSymbol);
+        preambleDetectionFFT = new FloatFFT_1D(preambleCorrLen);
+        symbolDectectionFFT = new FloatFFT_1D(symbolCorrLen);
+        preambleCorrResult = new float[preambleCorrLen];
+        symbolCorrResult = new float[symbolCorrLen];
+
     }
+
+
 
     public int getProcessBufferSize() {
         return processBufferSize;
@@ -83,12 +97,18 @@ public class Decoder implements FlagVar{
 
     public IndexMaxVarInfo getIndexMaxVarInfoFromFloats(float[] data1,float[] data2, boolean isData1FDomainSignal){
         IndexMaxVarInfo indexMaxVarInfo = new IndexMaxVarInfo();
+        Date date1 = new Date();
         float[] corr = xcorrFast(data1,data2,isData1FDomainSignal);
+        Date date2 = new Date();
+        System.out.println("corr time:"+(date2.getTime()-date1.getTime()));
+        date1 = new Date();
         int index = getMaxPosFromCorrFloat(corr,data2.length);
         indexMaxVarInfo.index = index;
         indexMaxVarInfo.maxVar = corr[(index+corr.length)%corr.length];
 
         IndexMaxVarInfo resultInfo = preambleDetection(corr,indexMaxVarInfo);
+        date2 = new Date();
+        System.out.println("preamble detection time:"+(date2.getTime()-date1.getTime()));
         return resultInfo;
     }
 
@@ -142,58 +162,65 @@ public class Decoder implements FlagVar{
         return corr;
     }
 
-    public static float[] xcorrFast(float []data1, float[] data2, boolean isData1FDomainSignal){
+    public float[] xcorrFast(float []data1, float[] data2, boolean isData1FDomainSignal){
 
         int len = 1;
         if(!isData1FDomainSignal) {
-            while (len < data1.length + data2.length) {
-                len = len * 2;
-            }
+            len = getFFTLen(data1.length,data2.length);
         }else{
             len = data1.length;
         }
         float[] hData1 = null;
         float[] hData2 = null;
-        float[] result = new float[len];
-        float[] corr = new float[len];
-        FloatFFT_1D fft = new FloatFFT_1D(len);
+        Date date1 = new Date();
+        float[] result = getCorrArray(len);
+        FloatFFT_1D fft = getFFT(len);
+        Date date2 = new Date();
+        System.out.println("initialization time:"+(date2.getTime()-date1.getTime()));
 
         if(!isData1FDomainSignal) {
             hData1 = new float[len];
             hData2 = new float[len];
-            for (int i = 0; i < len; i++) {
-                if (i < data1.length) {
-                    hData1[i] = data1[i];
-                } else {
-                    hData1[i] = 0;
-                }
-                if (i < data2.length) {
-                    hData2[i] = data2[i];
-                } else {
-                    hData2[i] = 0;
-                }
-            }
-            Date date1 = new Date();
+            System.arraycopy(data1,0,hData1,0,data1.length);
+            System.arraycopy(data2,0,hData2,0,data2.length);
+//            for (int i = 0; i < len; i++) {
+//                if (i < data1.length) {
+//                    hData1[i] = data1[i];
+//                } else {
+//                    hData1[i] = 0;
+//                }
+//                if (i < data2.length) {
+//                    hData2[i] = data2[i];
+//                } else {
+//                    hData2[i] = 0;
+//                }
+//            }
+            date1 = new Date();
             fft.realForward(hData1);
             fft.realForward(hData2);
-            Date date2 = new Date();
+            date2 = new Date();
             System.out.println("2 fft time:"+(date2.getTime()-date1.getTime()));
         }else{
             hData1 = data1;
             hData2 = new float[len];
-            for (int i = 0; i < len; i++) {
-                if (i < data2.length) {
-                    hData2[i] = data2[i];
-                } else {
-                    hData2[i] = 0;
-                }
-            }
-            Date date1 = new Date();
+            date1 = new Date();
+            System.arraycopy(data2,0,hData2,0,data2.length);
+            date2 = new Date();
+            System.out.println("arraycopy time:"+(date2.getTime()-date1.getTime()));
+//            for (int i = 0; i < len; i++) {
+//                if (i < data2.length) {
+//                    hData2[i] = data2[i];
+//                } else {
+//                    hData2[i] = 0;
+//                }
+//            }
+            date1 = new Date();
             fft.realForward(hData2);
-            Date date2 = new Date();
+            date2 = new Date();
             System.out.println("1 fft time:"+(date2.getTime()-date1.getTime()));
         }
 
+        date1 = new Date();
         result[0] = hData1[0] * hData2[0]; // value at f=0Hz is real-valued
         result[1] = hData1[1] * hData2[1]; // value at f=fs/2 is real-valued and packed at index 1
         for (int i = 1 ; i < result.length / 2 ; ++i) {
@@ -205,14 +232,31 @@ public class Decoder implements FlagVar{
             result[2*i]     = a*c + b*d;
             result[2*i + 1] = b*c - a*d;
         }
-        Date date1 = new Date();
+        date2 = new Date();
+        System.out.println("1 corr compute time:"+(date2.getTime()-date1.getTime()));
+        date1 = new Date();
         fft.realInverse(result, true);
-        Date date2 = new Date();
+        date2 = new Date();
         System.out.println("1 ifft time:"+(date2.getTime()-date1.getTime()));
-        for(int i=0;i<corr.length;i++){
-            corr[i] = Math.abs(result[i]);
+        date1 = new Date();
+        for(int i=0;i<result.length;i++){
+            result[i] = Math.abs(result[i]);
         }
-        return corr;
+        date2 = new Date();
+        System.out.println("abs time:"+(date2.getTime()-date1.getTime()));
+        return result;
+    }
+
+    public float[] getCorrArray(int len){
+        float[] result;
+        if(len == preambleCorrLen) {
+            result = preambleCorrResult;
+        }else if(len == symbolCorrLen){
+            result = symbolCorrResult;
+        }else{
+            result = new float[len];
+        }
+        return result;
     }
 
     /** corr is the correlation array, chirpLength is the chirp signal's length. return the postion of the max correlation.
@@ -252,7 +296,10 @@ public class Decoder implements FlagVar{
     }
 
     public IndexMaxVarInfo getIndexMaxVarInfoFromFAndTDomain(float[] sf, short[] reference){
+        Date date1 = new Date();
         float[] data2 = normalization(reference);
+        Date date2 = new Date();
+        System.out.println("normalization time:"+(date2.getTime()-date1.getTime()));
         IndexMaxVarInfo indexMaxVarInfo = getIndexMaxVarInfoFromFloats(sf,data2,true);
         return indexMaxVarInfo;
     }
@@ -292,11 +339,13 @@ public class Decoder implements FlagVar{
 
 
     public float[] getData1FFtFromSignals(short[] data1, int data2Len){
-        int len = 1;
-        while(len < data1.length+data2Len){
-            len = len*2;
-        }
-        FloatFFT_1D fft = new FloatFFT_1D(len);
+        int len = getFFTLen(data1.length,data2Len);
+
+        Date date1 = new Date();
+        FloatFFT_1D fft = getFFT(len);
+
+        Date date2 = new Date();
+//        System.out.println("getData1FFtFromSignals = time2:"+(date2.getTime()-date1.getTime()));
         float[] hData1 = new float[len];
         for(int i=0;i<len;i++){
             if(i<data1.length){
@@ -305,19 +354,44 @@ public class Decoder implements FlagVar{
                 hData1[i] = 0;
             }
         }
-        Date date1 = new Date();
+
+        date1 = new Date();
         fft.realForward(hData1);
-        Date date2 = new Date();
+        date2 = new Date();
         System.out.println("1 fft time:"+(date2.getTime()-date1.getTime()));
         return hData1;
     }
 
+    public FloatFFT_1D getFFT(int len) {
+        FloatFFT_1D fft;
+        if(len == preambleCorrLen) {
+            fft = preambleDetectionFFT;
+        }else if(len == symbolCorrLen){
+            fft = symbolDectectionFFT;
+        }else{
+            fft = new FloatFFT_1D(len);
+        }
+        return fft;
+    }
+
+    public int getFFTLen(int len1, int len2){
+        int len = 1;
+        while(len < len1+len2){
+            len = len*2;
+        }
+        return len;
+    }
+
 
     public float[] getData1FFtFromSignals(short[] data1,int low, int high, int data2Len){
+        Date date1 = new Date();
         short[] data0 = new short[high-low+1];
-        for(int i=low;i<=high;i++){
-            data0[i-low] = data1[i];
-        }
+        System.arraycopy(data1,low,data0,0,high-low+1);
+//        for(int i=low;i<=high;i++){
+//            data0[i-low] = data1[i];
+//        }
+        Date date2 = new Date();
+//        System.out.println("getData1FFtFromSignals = time1:"+(date2.getTime()-date1.getTime()));
         return getData1FFtFromSignals(data0,data2Len);
     }
 
