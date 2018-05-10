@@ -100,7 +100,7 @@ public class Decoder implements FlagVar{
         Date date1 = new Date();
         float[] corr = xcorr(data1,data2,isData1FDomainSignal);
         Date date2 = new Date();
-        Log.v("","corr time:"+(date2.getTime()-date1.getTime()));
+//        Log.v("","corr time:"+(date2.getTime()-date1.getTime()));
         date1 = new Date();
         int index = getMaxPosFromCorrFloat(corr,data2.length);
         indexMaxVarInfo.index = index;
@@ -108,7 +108,7 @@ public class Decoder implements FlagVar{
 
         IndexMaxVarInfo resultInfo = preambleDetection(corr,indexMaxVarInfo);
         date2 = new Date();
-        Log.v("","preamble detection time:"+(date2.getTime()-date1.getTime()));
+//        Log.v("","preamble detection time:"+(date2.getTime()-date1.getTime()));
         return resultInfo;
     }
 
@@ -128,7 +128,7 @@ public class Decoder implements FlagVar{
         float[] result = getCorrArray(len);
         FloatFFT_1D fft = getFFT(len);
         Date date2 = new Date();
-        Log.v("","initialization time:"+(date2.getTime()-date1.getTime()));
+//        Log.v("","initialization time:"+(date2.getTime()-date1.getTime()));
 
         if(!isData1FDomainSignal) {
             hData1 = new float[len];
@@ -151,14 +151,14 @@ public class Decoder implements FlagVar{
             fft.realForward(hData1);
             fft.realForward(hData2);
             date2 = new Date();
-            Log.v("","2 fft time:"+(date2.getTime()-date1.getTime()));
+//            Log.v("","2 fft time:"+(date2.getTime()-date1.getTime()));
         }else{
             hData1 = data1;
             hData2 = new float[len];
             date1 = new Date();
             System.arraycopy(data2,0,hData2,0,data2.length);
             date2 = new Date();
-            Log.v("","arraycopy time:"+(date2.getTime()-date1.getTime()));
+//            Log.v("","arraycopy time:"+(date2.getTime()-date1.getTime()));
 //            for (int i = 0; i < len; i++) {
 //                if (i < data2.length) {
 //                    hData2[i] = data2[i];
@@ -169,7 +169,7 @@ public class Decoder implements FlagVar{
             date1 = new Date();
             fft.realForward(hData2);
             date2 = new Date();
-            Log.v("","1 fft time:"+(date2.getTime()-date1.getTime()));
+//            Log.v("","1 fft time:"+(date2.getTime()-date1.getTime()));
         }
 
         date1 = new Date();
@@ -185,17 +185,17 @@ public class Decoder implements FlagVar{
             result[2*i + 1] = b*c - a*d;
         }
         date2 = new Date();
-        Log.v("","1 corr compute time:"+(date2.getTime()-date1.getTime()));
+//        Log.v("","1 corr compute time:"+(date2.getTime()-date1.getTime()));
         date1 = new Date();
         fft.realInverse(result, true);
         date2 = new Date();
-        Log.v("","1 ifft time:"+(date2.getTime()-date1.getTime()));
+//        Log.v("","1 ifft time:"+(date2.getTime()-date1.getTime()));
         date1 = new Date();
         for(int i=0;i<result.length;i++){
             result[i] = Math.abs(result[i]);
         }
         date2 = new Date();
-        Log.v("","abs time:"+(date2.getTime()-date1.getTime()));
+//        Log.v("","abs time:"+(date2.getTime()-date1.getTime()));
         return result;
     }
 
@@ -251,7 +251,7 @@ public class Decoder implements FlagVar{
         Date date1 = new Date();
         float[] data2 = normalization(reference);
         Date date2 = new Date();
-        Log.v("","normalization time:"+(date2.getTime()-date1.getTime()));
+//        Log.v("","normalization time:"+(date2.getTime()-date1.getTime()));
         IndexMaxVarInfo indexMaxVarInfo = getIndexMaxVarInfoFromFloats(sf,data2,true);
         return indexMaxVarInfo;
     }
@@ -309,7 +309,7 @@ public class Decoder implements FlagVar{
         date1 = new Date();
         fft.realForward(hData1);
         date2 = new Date();
-        Log.v("","1 fft time:"+(date2.getTime()-date1.getTime()));
+//        Log.v("","1 fft time:"+(date2.getTime()-date1.getTime()));
         return hData1;
     }
 
@@ -354,7 +354,7 @@ public class Decoder implements FlagVar{
         short[] data0 = getPreSamples(high-low+1);
         System.arraycopy(data1,low,data0,0,high-low+1);
         Date date2 = new Date();
-        Log.v("","getData1FFtFromSignals = time1:"+(date2.getTime()-date1.getTime()));
+//        Log.v("","getData1FFtFromSignals = time1:"+(date2.getTime()-date1.getTime()));
         return getData1FFtFromSignals(data0,data2Len);
     }
 
@@ -403,7 +403,7 @@ public class Decoder implements FlagVar{
 
         //debug
         if(endIndex>FlagVar.beconMessageLength+ AudioRecorder.getBufferSize()){
-            Log.v("","endIndex:"+endIndex);
+//            Log.v("","endIndex:"+endIndex);
             StringBuilder sb = new StringBuilder();
             for(int i=0;i<s.length;i++){
                 sb.append(s[i]).append(",");
@@ -411,7 +411,7 @@ public class Decoder implements FlagVar{
                     sb.append("\n");
                 }
             }
-            Log.v("","data:"+sb.toString());
+//            Log.v("","data:"+sb.toString());
         }
 
 
