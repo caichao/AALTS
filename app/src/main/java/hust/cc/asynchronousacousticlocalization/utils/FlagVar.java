@@ -4,6 +4,8 @@ import java.math.BigDecimal;
 
 public interface FlagVar {
 
+    //public int anchorID = 1;
+
     //sampling rate
     public int Fs = 48000;
 
@@ -57,4 +59,13 @@ public interface FlagVar {
     int beconMessageLength = (int)(new BigDecimal(beconMessageTime*Fs).setScale(0, BigDecimal.ROUND_HALF_UP).floatValue());
 
 
+    /*************************String value for message exchanging*****************************/
+    String upStr = "up";
+    String downStr = "down";
+    String tdoaStr = "tdoa";
+    String anchorIdStr = "anchorId";
+    String targetIdStr = "targetId";
+    String xStr = "x";
+    String yStr = "y";
+    String identityStr = "identity";
 }

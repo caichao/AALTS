@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--  dimension for txt -->
+    <dimen name="text_margin">20dp</dimen>
+    <dimen name="text_size">24sp</dimen>
+    <dimen name="large_text_size">48sp</dimen>
+    <dimen name="seperate_margin">30dp</dimen>
+    <dimen name="super_text_size">64sp</dimen>
+
+</resources>

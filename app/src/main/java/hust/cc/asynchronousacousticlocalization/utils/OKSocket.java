@@ -1,5 +1,7 @@
 package hust.cc.asynchronousacousticlocalization.utils;
 
+import android.util.Log;
+
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
@@ -9,6 +11,8 @@ import java.net.Socket;
 
 import hust.cc.asynchronousacousticlocalization.physical.AudioRecorder;
 
+import static android.content.ContentValues.TAG;
+
 public class OKSocket extends Thread implements IOkSocket {
 
     private Socket mSocket = null;
@@ -17,6 +21,11 @@ public class OKSocket extends Thread implements IOkSocket {
     private boolean isInitializationFinished = false;
     private boolean isSocketInitOk = false;
     private char[] receivedMessage = null;
+    private boolean openSendLoop = false;
+    TimeStamp timeStamp = null;
+    private static final String TAG = "Socket channel";
+    private String ip;
+    private int port;
 
     private static OKSocket instance = new OKSocket();
     private OKSocket(){};
@@ -30,15 +39,16 @@ public class OKSocket extends Thread implements IOkSocket {
     @Override
     public void run() {
         super.run();
-
+        init(this.ip, this.port);
         while (isSocketInitOk){
             try {
-                int len = br.read(receivedMessage);
-                JSONObject jsonObject = null;
+                if(openSendLoop){
+                    //Log.e(TAG, "send a timestamp to server");
+                    openSendLoop = false;
+                    send(this.timeStamp.formatMessage());
+                    mSocketCallback.onReceiveSocketMsg(receive());
+                }
 
-                // TODO: transform the received char characters into json object
-
-                mSocketCallback.onReceiveSocketMsg(jsonObject);
             }catch (Exception e){
                 e.printStackTrace();
             }
@@ -63,10 +73,18 @@ public class OKSocket extends Thread implements IOkSocket {
                 br = new BufferedReader(new InputStreamReader(mSocket.getInputStream()));
                 isSocketInitOk = true;
                 receivedMessage = new char[20480];
+                Log.e(TAG, "socket init ok");
             }catch (Exception e){
                 e.printStackTrace();
             }
         }
+
+        timeStamp = new TimeStamp();
+    }
+
+    public void initSocket(String ip, int port){
+        this.ip = ip;
+        this.port = port;
     }
 
     @Override
@@ -82,6 +100,13 @@ public class OKSocket extends Thread implements IOkSocket {
         }
     }
 
+    public void sendTimeStamp(TimeStamp timeStamp){
+        //
+        this.timeStamp = timeStamp;
+        synchronized (this){
+            openSendLoop = true;
+        }
+    }
 
     /**
      * send json object to the server
@@ -101,13 +126,15 @@ public class OKSocket extends Thread implements IOkSocket {
     public JSONObject receive(){
         JSONObject jsonObject = null;
         if(mSocket != null){
+            //Log.e(TAG, "trying to parse server information");
             try {
                 //TODO here: implement how to transform the received message into json object
-
+                br.read(receivedMessage);
+                //Log.e(TAG, "message from server" + len);
+                jsonObject = new JSONObject(new String(receivedMessage));
             }catch (Exception e){
                 e.printStackTrace();
             }
-
         }
         return jsonObject;
     }

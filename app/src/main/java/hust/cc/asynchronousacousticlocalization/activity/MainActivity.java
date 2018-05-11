@@ -13,12 +13,16 @@ import org.json.JSONObject;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
+import butterknife.OnClick;
 import hust.cc.asynchronousacousticlocalization.R;
 import hust.cc.asynchronousacousticlocalization.physical.AudioRecorder;
 import hust.cc.asynchronousacousticlocalization.physical.PlayThread;
 import hust.cc.asynchronousacousticlocalization.processing.DecodThread;
+import hust.cc.asynchronousacousticlocalization.processing.DecodeScheduleMessage;
+//import hust.cc.asynchronousacousticlocalization.processing.ScheduleListener;
 import hust.cc.asynchronousacousticlocalization.utils.FlagVar;
 import hust.cc.asynchronousacousticlocalization.utils.OKSocket;
+import hust.cc.asynchronousacousticlocalization.utils.TimeStamp;
 
 public class MainActivity extends AppCompatActivity implements AudioRecorder.RecordingCallback, OKSocket.Callback {
 
@@ -29,10 +33,20 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
     Button recvButton;
     @BindView(R.id.text)
     TextView text;
+    @BindView(R.id.button_test)
+    Button testButton;
 
     private AudioRecorder audioRecorder = new AudioRecorder();
-    private PlayThread playThread = new PlayThread();
+    //private PlayThread playThread = new PlayThread();
     private DecodThread decodThread;
+
+    // by cc
+    private DecodeScheduleMessage decodeScheduleMessage = null;
+    private OKSocket okSocket = null;
+    private PlayThread playThread = null;
+    private final String TAG = "MainActivity";
+    public static int identity = 1;
+    //public static int targetId =
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -62,20 +76,44 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
             }
         });
 
-//        playThread.fillBufferAndPlay();
-        omitButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-//                playThread.run();
-            }
-        });
+        // thread that handle message from the server on schedule information
+        decodeScheduleMessage = DecodeScheduleMessage.getInstance();
+        decodeScheduleMessage.start();
+        Log.e(TAG, "decodeSchedule thread started");
 
+        okSocket = OKSocket.getInstance();
+        okSocket.socketCallback(this);
+        okSocket.initSocket("192.168.1.101", 22222);
+        okSocket.start();
+
+        Log.e(TAG, "socket thread start");
+        playThread = new PlayThread(decodeScheduleMessage);
+        playThread.start();
+        Log.e(TAG, "play thread is listening");
     }
+
+
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
+
+        okSocket.close();
+        decodeScheduleMessage.close();
+        decodThread.close();
+        playThread.close();
+        audioRecorder.finishRecord();
+}
+
+    // ************************** UI events handling part***********************************************
+    @OnClick(R.id.button_test)
+    void onTestButton(){
+        TimeStamp timeStamp = new TimeStamp(identity, 1234);
+        okSocket.sendTimeStamp(timeStamp);
+        Log.e(TAG, "message to the server sent");
     }
+
+    //************************ message handling part **************************************
 
     // here we process the received audio samples
     @Override
@@ -86,11 +124,14 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
 
     }
 
-    // here we process the received message from the server
+    // here we process the received message from the server about tdoa information
     @Override
     public void onReceiveSocketMsg(JSONObject jsonObject) {
-
+        Log.e(TAG, jsonObject.toString());
     }
+
+    // here we process the receiver message aboust schedule information
+
 
     public Handler myHandler = new Handler(){
 
