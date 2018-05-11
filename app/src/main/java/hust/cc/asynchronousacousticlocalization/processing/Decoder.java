@@ -95,7 +95,7 @@ public class Decoder implements FlagVar{
      * @return: return the max value and its index
      */
 
-    public IndexMaxVarInfo getIndexMaxVarInfoFromFloats(float[] data1,float[] data2, boolean isData1FDomainSignal){
+    public IndexMaxVarInfo getIndexMaxVarInfoFromFloats(float[] data1,float[] data2, boolean isData1FDomainSignal, float threshold){
         IndexMaxVarInfo indexMaxVarInfo = new IndexMaxVarInfo();
         Date date1 = new Date();
         float[] corr = xcorr(data1,data2,isData1FDomainSignal);
@@ -106,7 +106,7 @@ public class Decoder implements FlagVar{
         indexMaxVarInfo.index = index;
         indexMaxVarInfo.maxVar = corr[(index+corr.length)%corr.length];
 
-        IndexMaxVarInfo resultInfo = preambleDetection(corr,indexMaxVarInfo);
+        IndexMaxVarInfo resultInfo = preambleDetection(corr,indexMaxVarInfo,threshold);
         date2 = new Date();
 //        Log.v("","preamble detection time:"+(date2.getTime()-date1.getTime()));
         return resultInfo;
@@ -238,21 +238,21 @@ public class Decoder implements FlagVar{
      * @param reference: reference signal
      * @return: return the max value and its index
      */
-    public IndexMaxVarInfo getIndexMaxVarInfoFromSignals(short s[], short[] reference){
+    public IndexMaxVarInfo getIndexMaxVarInfoFromSignals(short s[], short[] reference,float threshold){
         float[] data1 = normalization(s);
         float[] data2 = normalization(reference);
 
-        IndexMaxVarInfo indexMaxVarInfo = getIndexMaxVarInfoFromFloats(data1,data2,false);
+        IndexMaxVarInfo indexMaxVarInfo = getIndexMaxVarInfoFromFloats(data1,data2,false,threshold);
 
         return indexMaxVarInfo;
     }
 
-    public IndexMaxVarInfo getIndexMaxVarInfoFromFAndTDomain(float[] sf, short[] reference){
+    public IndexMaxVarInfo getIndexMaxVarInfoFromFAndTDomain(float[] sf, short[] reference,float threshold){
         Date date1 = new Date();
         float[] data2 = normalization(reference);
         Date date2 = new Date();
 //        Log.v("","normalization time:"+(date2.getTime()-date1.getTime()));
-        IndexMaxVarInfo indexMaxVarInfo = getIndexMaxVarInfoFromFloats(sf,data2,true);
+        IndexMaxVarInfo indexMaxVarInfo = getIndexMaxVarInfoFromFloats(sf,data2,true,threshold);
         return indexMaxVarInfo;
     }
 
@@ -264,12 +264,12 @@ public class Decoder implements FlagVar{
      * @param reference - reference signal
      * @return correlation results with maximum value and its index
      */
-    public IndexMaxVarInfo getIndexMaxVarInfoFromSignals(short s[], int low, int high, short[] reference){
+    public IndexMaxVarInfo getIndexMaxVarInfoFromSignals(short s[], int low, int high, short[] reference, float threshold){
         short[] s0 = new short[high-low+1];
         for(int i=low;i<=high;i++){
             s0[i-low] = s[i];
         }
-        IndexMaxVarInfo indexMaxVarInfo = getIndexMaxVarInfoFromSignals(s0,reference);
+        IndexMaxVarInfo indexMaxVarInfo = getIndexMaxVarInfoFromSignals(s0,reference, threshold);
         return indexMaxVarInfo;
     }
 
@@ -377,15 +377,16 @@ public class Decoder implements FlagVar{
      * @param indexMaxVarInfo - the info of the max corr index
      * @return true indicate the presence of the corresponding preamble and vise versa
      */
-    public IndexMaxVarInfo preambleDetection(float[] corr, IndexMaxVarInfo indexMaxVarInfo){
+    public IndexMaxVarInfo preambleDetection(float[] corr, IndexMaxVarInfo indexMaxVarInfo, float threshold){
         indexMaxVarInfo.isReferenceSignalExist = false;
 //        if(indexMaxVarInfo.maxVar > FlagVar.preambleDetectionThreshold) {
             // use the ratio of peak value to the mean value of its previous 200 samples
         int startIndex = indexMaxVarInfo.index - numberOfPreviousSamples;
         float ratio = indexMaxVarInfo.maxVar / Algorithm.meanValue(corr, startIndex, indexMaxVarInfo.index);
-        if(ratio > ratioThreshold) {
+        if(ratio > threshold) {
             indexMaxVarInfo.isReferenceSignalExist = true;
         }
+        System.out.println("index:"+indexMaxVarInfo.index+"   ratio:"+ratio);
 //        }
         return indexMaxVarInfo;
     }
