@@ -20,9 +20,9 @@ public class TimeStamp {
 
     public JSONObject formatMessage(){
 
-        Map<String, Integer> map = new HashMap<>();
-        map.put(FlagVar.identityStr, this.anchorId);
-        map.put(FlagVar.tdoaStr, this.tdoa);
+        Map<String, String> map = new HashMap<>();
+        map.put(FlagVar.identityStr, this.anchorId + "");
+        map.put(FlagVar.tdoaStr, this.tdoa + "");
 
         JSONObject jsonObject = new JSONObject(map);
         return jsonObject;

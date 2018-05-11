@@ -126,6 +126,7 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
         TimeStamp timeStamp = new TimeStamp(identity, 1234);
         okSocket.sendTimeStamp(timeStamp);
         Log.e(TAG, "message to the server sent");
+        Log.e(TAG, timeStamp.formatMessage().toString());
     }
 
     @OnClick(R.id.button_setting)
