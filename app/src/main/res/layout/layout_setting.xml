@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <TextView
+        android:text="@string/ip_port"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignBaseline="@+id/ip_port"
+        android:layout_alignBottom="@+id/ip_port"
+        android:layout_alignParentLeft="true"
+        android:textSize="20sp"
+        android:textColor="@color/darkblue"
+        android:layout_alignParentStart="true" />
+
+    <TextView
+        android:text="@string/ip_address"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignBaseline="@+id/ip_address"
+        android:layout_alignBottom="@+id/ip_address"
+        android:layout_alignParentLeft="true"
+        android:textSize="20sp"
+        android:textColor="@color/darkgreen"
+        android:layout_alignParentStart="true" />
+
+    <TextView
+        android:text="@string/identity"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignBaseline="@+id/identity"
+        android:layout_alignBottom="@+id/identity"
+        android:layout_alignParentLeft="true"
+        android:textSize="20sp"
+        android:textColor="@color/darkcyan"
+        android:layout_alignParentStart="true" />
+
+    <EditText
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:inputType="textPersonName"
+        android:text="Name"
+        android:ems="10"
+        android:textColor="@color/darkorange"
+        android:id="@+id/ip_port"
+        android:layout_marginTop="12dp"
+        android:layout_below="@+id/ip_address"
+        android:layout_alignLeft="@+id/ip_address"
+        android:layout_alignStart="@+id/ip_address" />
+
+    <EditText
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:inputType="textPersonName"
+        android:text="Name"
+        android:ems="10"
+        android:textColor="@color/red"
+        android:id="@+id/ip_address"
+        android:layout_marginRight="19dp"
+        android:layout_marginEnd="19dp"
+        android:layout_alignParentTop="true"
+        android:layout_alignParentRight="true"
+        android:layout_alignParentEnd="true" />
+
+    <EditText
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:inputType="textPersonName"
+        android:text="Name"
+        android:textColor="@color/red"
+        android:ems="10"
+        android:id="@+id/identity"
+        android:layout_marginTop="12dp"
+        android:layout_below="@+id/ip_port"
+        android:layout_alignLeft="@+id/ip_port"
+        android:layout_alignStart="@+id/ip_port" />
+</RelativeLayout>
