@@ -3,4 +3,8 @@
 
     <!-- by cc -->
     <string name="button_test">TestButton</string>
+    <string name="button_setting">Set parameters</string>
+    <string name="ip_port">IP Port: </string>
+    <string name="ip_address">IP Address: </string>
+    <string name="identity">Identity: </string>
 </resources>

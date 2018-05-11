@@ -1,13 +1,20 @@
 package hust.cc.asynchronousacousticlocalization.activity;
 
+import android.content.Context;
+import android.content.DialogInterface;
+import android.content.SharedPreferences;
 import android.os.Handler;
 import android.os.Message;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import org.json.JSONObject;
 
@@ -33,8 +40,11 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
     Button recvButton;
     @BindView(R.id.text)
     TextView text;
+    // by cc
     @BindView(R.id.button_test)
     Button testButton;
+    @BindView(R.id.button_setting)
+    Button settingButton;
 
     private AudioRecorder audioRecorder = new AudioRecorder();
     //private PlayThread playThread = new PlayThread();
@@ -46,6 +56,10 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
     private PlayThread playThread = null;
     private final String TAG = "MainActivity";
     public static int identity = 1;
+    private String ipAddressStr = "IP_ADDRESS";
+    private String addrPortStr = "ADDR_PORT";
+    private String identityStr = "IDENTITY";
+    private String settingStr = "SETTING";
     //public static int targetId =
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -83,8 +97,8 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
 
         okSocket = OKSocket.getInstance();
         okSocket.socketCallback(this);
-        okSocket.initSocket("192.168.1.101", 22222);
-        okSocket.start();
+        //okSocket.initSocket("192.168.1.101", 22222);
+        //okSocket.start();
 
         Log.e(TAG, "socket thread start");
         playThread = new PlayThread(decodeScheduleMessage);
@@ -99,6 +113,7 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
         super.onDestroy();
 
         okSocket.close();
+        decodeScheduleMessage.removeObserver(playThread);
         decodeScheduleMessage.close();
         decodThread.close();
         playThread.close();
@@ -107,11 +122,68 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
 
     // ************************** UI events handling part***********************************************
     @OnClick(R.id.button_test)
-    void onTestButton(){
+    void onTestButtonClicked(){
         TimeStamp timeStamp = new TimeStamp(identity, 1234);
         okSocket.sendTimeStamp(timeStamp);
         Log.e(TAG, "message to the server sent");
     }
+
+    @OnClick(R.id.button_setting)
+    void onSettingButtonClicked(){
+        settingDialog();
+        settingButton.setVisibility(View.INVISIBLE);
+    }
+
+    private void settingDialog(){
+        LayoutInflater layoutInflater = getLayoutInflater();
+        View layout = layoutInflater.inflate(R.layout.layout_setting,null);
+        final EditText ip = (EditText)layout.findViewById(R.id.ip_address);
+        final EditText port = (EditText)layout.findViewById(R.id.ip_port);
+        final EditText identity = (EditText)layout.findViewById(R.id.identity);
+
+        SharedPreferences setting = getSharedPreferences(settingStr, Context.MODE_PRIVATE);
+        String ipAddr = setting.getString(ipAddressStr," ").trim();
+        int ipPort = setting.getInt(addrPortStr,-1);
+
+        MainActivity.identity = setting.getInt(identityStr, 1);
+
+        ip.setText(ipAddr);
+        port.setText(String.valueOf(ipPort));
+        identity.setText(String.valueOf(MainActivity.identity));
+        new AlertDialog.Builder(this)
+                .setTitle("Parameter settings")
+                .setView(layout)
+                .setPositiveButton("Confirm", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        String ipAddress = ip.getText().toString().trim();
+                        int ipPort = Integer.parseInt(port.getText().toString());
+                        MainActivity.identity = Integer.parseInt(identity.getText().toString());
+                        if(okSocket != null){
+                            //commSocket.setup(ipAddress,ipPort);
+                            ///commSocket.start();
+                            okSocket.initSocket(ipAddress, ipPort);
+                            okSocket.start();
+                            Toast.makeText(getApplicationContext(),"Init Socket ok",Toast.LENGTH_SHORT).show();
+                        }
+
+                        SharedPreferences setting = getSharedPreferences(settingStr,Context.MODE_PRIVATE);
+                        SharedPreferences.Editor editor = setting.edit();
+                        editor.putString(ipAddressStr,ipAddress);
+                        editor.putInt(addrPortStr,ipPort);
+                        editor.putInt(identityStr, MainActivity.identity);
+                        editor.apply();
+                    }
+                })
+                .setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+
+                    }
+                }).show();
+
+    }
+
 
     //************************ message handling part **************************************
 
@@ -144,6 +216,10 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
                     StringBuilder sb = new StringBuilder();
                     sb.append("tdoa:").append(msg.arg1).append("\n").append("id num:").append(msg.arg2);
                     text.setText(sb.toString());
+
+                    TimeStamp timeStamp = new TimeStamp(MainActivity.identity, msg.arg1);
+                    okSocket.sendTimeStamp(timeStamp);
+
                     break;
             }
         }
