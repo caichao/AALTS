@@ -107,7 +107,7 @@ public class DecodThread extends Decoder implements Runnable{
                     // 3. check the down preamble and do the above operation again
                     mIndexMaxVarInfo.isReferenceSignalExist = false;
                     date1 = new Date();
-                    mIndexMaxVarInfo = getIndexMaxVarInfoFromFAndTDomain(fft,downPreamble,ratioThreshold/2.0f);
+                    mIndexMaxVarInfo = getIndexMaxVarInfoFromFAndTDomain(fft,downPreamble,ratioThreshold);
                     date2 = new Date();
 //                    Log.v("","getIndexMaxVarInfoFromFAndTDomain time:"+(date2.getTime()-date1.getTime()));
 //                    mIndexMaxVarInfo = getIndexMaxVarInfoFromSignals(bufferedSamples, 0,processBufferSize+LPreamble-1,downPreamble);

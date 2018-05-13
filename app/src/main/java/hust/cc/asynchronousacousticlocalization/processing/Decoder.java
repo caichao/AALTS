@@ -379,15 +379,15 @@ public class Decoder implements FlagVar{
      */
     public IndexMaxVarInfo preambleDetection(float[] corr, IndexMaxVarInfo indexMaxVarInfo, float threshold){
         indexMaxVarInfo.isReferenceSignalExist = false;
-//        if(indexMaxVarInfo.maxVar > FlagVar.preambleDetectionThreshold) {
+        if(indexMaxVarInfo.maxVar > FlagVar.preambleDetectionThreshold) {
             // use the ratio of peak value to the mean value of its previous 200 samples
-        int startIndex = indexMaxVarInfo.index - numberOfPreviousSamples;
-        float ratio = indexMaxVarInfo.maxVar / Algorithm.meanValue(corr, startIndex, indexMaxVarInfo.index);
-        if(ratio > threshold) {
-            indexMaxVarInfo.isReferenceSignalExist = true;
+            int startIndex = indexMaxVarInfo.index - numberOfPreviousSamples;
+            float ratio = indexMaxVarInfo.maxVar / Algorithm.meanValue(corr, startIndex, indexMaxVarInfo.index);
+            if(ratio > threshold) {
+                indexMaxVarInfo.isReferenceSignalExist = true;
+            }
+            System.out.println("index:"+indexMaxVarInfo.index+"   ratio:"+ratio+"   maxCorr:"+indexMaxVarInfo.maxVar);
         }
-        System.out.println("index:"+indexMaxVarInfo.index+"   ratio:"+ratio);
-//        }
         return indexMaxVarInfo;
     }
 

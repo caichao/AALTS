@@ -23,7 +23,7 @@ public class AudioRecorder implements IAudioRecorder{
 
     private static final int BUFFER_BYTES_ELEMENTS = 1024;
     private static final int BUFFER_BYTES_PER_ELEMENT = RECORDER_AUDIO_ENCODING;
-    private static final int RECORDER_CHANNELS_IN = AudioFormat.CHANNEL_IN_MONO;
+    private static final int RECORDER_CHANNELS_IN = AudioFormat.CHANNEL_IN_STEREO;
 
 
     public static final int RECORDER_STATE_FAILURE = -1;
@@ -101,7 +101,7 @@ public class AudioRecorder implements IAudioRecorder{
 //                        Log.e("","len:"+len+"  bufferSize:"+bufferSize+" signalLen:"+ FlagVar.beconMessageLength);
 
                         if (len > 0) {
-                            recordingCallback.onDataReady(recordBuffer,len);
+                            recordingCallback.onDataReady(recordBuffer,len/2);
                         } else {
                             Log.e(AudioRecorder.class.getSimpleName(), "error: " + len);
                             onRecordFailure();
@@ -150,6 +150,7 @@ public class AudioRecorder implements IAudioRecorder{
             size = size * 2;
         }
         bufferSize = size;
+
         return bufferSize;
     }
 

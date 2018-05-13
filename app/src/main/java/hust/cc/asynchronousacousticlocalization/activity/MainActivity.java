@@ -27,6 +27,7 @@ import hust.cc.asynchronousacousticlocalization.physical.PlayThread;
 import hust.cc.asynchronousacousticlocalization.processing.DecodThread;
 import hust.cc.asynchronousacousticlocalization.processing.DecodeScheduleMessage;
 //import hust.cc.asynchronousacousticlocalization.processing.ScheduleListener;
+import hust.cc.asynchronousacousticlocalization.processing.Decoder;
 import hust.cc.asynchronousacousticlocalization.utils.FlagVar;
 import hust.cc.asynchronousacousticlocalization.utils.OKSocket;
 import hust.cc.asynchronousacousticlocalization.utils.TimeStamp;
@@ -60,6 +61,9 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
     private String addrPortStr = "ADDR_PORT";
     private String identityStr = "IDENTITY";
     private String settingStr = "SETTING";
+    private short[] testArray1 = new short[409600];
+    private short[] testArray2 = new short[409600];
+    private int testI = 0;
     //public static int targetId =
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -72,7 +76,7 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
     private void initParams(){
 
         decodThread = new DecodThread(myHandler);
-        decodThread.setProcessBufferSize(AudioRecorder.getBufferSize());
+        decodThread.setProcessBufferSize(AudioRecorder.getBufferSize()/2);
         new Thread(decodThread).start();
         audioRecorder.recordingCallback(this);
         recvButton.setOnClickListener(new View.OnClickListener() {
@@ -87,6 +91,19 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
                 }catch (Exception e){
                     e.printStackTrace();
                 }
+            }
+        });
+        omitButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                short[] testBuf = new short[1000];
+                for(int i=0;i<testBuf.length;i++){
+                    if(i%3 == 0){
+                        testBuf[i] = 10000;
+                    }
+                }
+//                playThread.fillBufferAndPlay(testBuf);
+                playThread.fillBufferAndPlay(Decoder.upPreamble);
             }
         });
 
@@ -191,9 +208,22 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
     // here we process the received audio samples
     @Override
     public void onDataReady(short[] data, int len) {
-        if (decodThread.samplesList.size() < 300) {
-            decodThread.fillSamples(data);
+        short[] data1 = new short[len];
+        short[] data2 = new short[len];
+        for (int i = 0; i < len; i++) {
+            data1[i] = data[2 * i];
+            data2[i] = data[2 * i + 1];
         }
+        /*
+        if(testI<100){
+            System.arraycopy(data1,0, testArray1,4096*testI,4096);
+            System.arraycopy(data2,0, testArray2,4096*testI,4096);
+            testI++;
+        }else{
+            System.out.println(testI);
+            return;
+        }*/
+        decodThread.fillSamples(data1);
 
     }
 
