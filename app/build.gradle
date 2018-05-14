@@ -32,4 +32,6 @@ dependencies {
     androidTestImplementation 'com.android.support.test.espresso:espresso-core:3.0.1'
     annotationProcessor 'com.jakewharton:butterknife-compiler:8.8.1'
     implementation 'com.jakewharton:butterknife:8.8.1'
+    implementation files('libs/JTransforms-3.1-with-dependencies.jar')
+    implementation files('libs/GraphView-4.2.1.jar')
 }

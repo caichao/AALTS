@@ -20,7 +20,6 @@
         android:text="接收声音"
         />
 
-
     <TextView
         android:id="@+id/text"
         android:layout_width="wrap_content"
@@ -30,5 +29,34 @@
         app:layout_constraintLeft_toLeftOf="parent"
         app:layout_constraintRight_toRightOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
+
+    <!--  ***** by cc  ****** -->
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/button_test"
+        android:textColor="@color/red"
+        android:textSize="@dimen/text_size"
+        android:id="@+id/button_test"
+        />
+
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/button_setting"
+        android:textColor="@color/darkblue"
+        android:textSize="@dimen/text_size"
+        android:id="@+id/button_setting"
+        />
+
+    <com.jjoe64.graphview.GraphView
+        android:layout_width="match_parent"
+        android:layout_height="140dp"
+        android:id="@+id/graph"/>
+
+    <com.jjoe64.graphview.GraphView
+        android:layout_width="match_parent"
+        android:layout_height="140dp"
+        android:id="@+id/graph2"/>
 
 </LinearLayout>

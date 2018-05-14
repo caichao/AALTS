@@ -25,6 +25,7 @@ public class DecodThread extends Decoder implements Runnable{
     private Handler mHandler;
     public List<short[]> samplesList;
 
+
     private IndexMaxVarInfo mIndexMaxVarInfo;
 
     public DecodThread(Handler mHandler){
@@ -74,19 +75,25 @@ public class DecodThread extends Decoder implements Runnable{
                     Date date2 = new Date();
 //                    Log.v("","getData1FFtFromSignals time:"+(date2.getTime()-date1.getTime()));
 
+                    //open this to see corr in graphs
+//                    testGraph(fft);
+//                    if(true) {
+//                        continue;
+//                    }
+
+
                     // 1. the first step is to check the existence of preamble either up or down
                     mIndexMaxVarInfo.isReferenceSignalExist = false;
                     date1 = new Date();
-                    mIndexMaxVarInfo = getIndexMaxVarInfoFromFAndTDomain(fft,upPreamble);
+                    mIndexMaxVarInfo = getIndexMaxVarInfoFromFAndTDomain(fft,upPreamble,ratioThreshold);
                     date2 = new Date();
 //                    Log.v("","getIndexMaxVarInfoFromFAndTDomain time:"+(date2.getTime()-date1.getTime()));
-//                    mIndexMaxVarInfo = getIndexMaxVarInfoFromSignals(bufferedSamples,0,processBufferSize+LPreamble-1, upPreamble);
 
                     // 2. if the preamble exist, then decode the anchor ID
-                    if (mIndexMaxVarInfo.isReferenceSignalExist && !isSignalRepeatedDetected(mIndexMaxVarInfo,processBufferSize)) {
+                    if (mIndexMaxVarInfo.isReferenceSignalExist && !isSignalRepeatedDetected(mIndexMaxVarInfo,processBufferSize) ) {
                         mTDOACounter++;
                         date1 = new Date();
-                        int anchorID = decodeAnchorID(bufferedSamples, true, mIndexMaxVarInfo);
+//                        int anchorID = decodeAnchorID(bufferedSamples, true, mIndexMaxVarInfo);
                         date2 = new Date();
 //                        Log.v("","decodeAnchorID time:"+(date2.getTime()-date1.getTime()));
                         TDOAUtils tdoaUtils = new TDOAUtils();
@@ -95,23 +102,25 @@ public class DecodThread extends Decoder implements Runnable{
                         tdoaUtils.preambleType = FlagVar.UP_PREAMBLE;
                         tdoaUtils.timeIndex = mIndexMaxVarInfo.index;
                         tdoaUtils.TDOACounter = mTDOACounter;
-                        tdoaUtils.correspondingAnchorID = anchorID;
+//                        tdoaUtils.correspondingAnchorID = anchorID;
 
                         preambleInfoList.add(tdoaUtils);
 
+                    }
+                    if(!mIndexMaxVarInfo.isReferenceSignalExist){
+//                        System.out.println("false");
                     }
 
                     // 3. check the down preamble and do the above operation again
                     mIndexMaxVarInfo.isReferenceSignalExist = false;
                     date1 = new Date();
-                    mIndexMaxVarInfo = getIndexMaxVarInfoFromFAndTDomain(fft,downPreamble);
+                    mIndexMaxVarInfo = getIndexMaxVarInfoFromFAndTDomain(fft,downPreamble,ratioThreshold);
                     date2 = new Date();
 //                    Log.v("","getIndexMaxVarInfoFromFAndTDomain time:"+(date2.getTime()-date1.getTime()));
-//                    mIndexMaxVarInfo = getIndexMaxVarInfoFromSignals(bufferedSamples, 0,processBufferSize+LPreamble-1,downPreamble);
-                    if (mIndexMaxVarInfo.isReferenceSignalExist && !isSignalRepeatedDetected(mIndexMaxVarInfo,processBufferSize)) {
+                    if (mIndexMaxVarInfo.isReferenceSignalExist && !isSignalRepeatedDetected(mIndexMaxVarInfo,processBufferSize) ) {
                         mTDOACounter++;
                         date1 = new Date();
-                        int anchorID = decodeAnchorID(bufferedSamples, false, mIndexMaxVarInfo);
+//                        int anchorID = decodeAnchorID(bufferedSamples, false, mIndexMaxVarInfo);
                         date2 = new Date();
 //                        Log.v("","decodeAnchorID time:"+(date2.getTime()-date1.getTime()));
 
@@ -120,7 +129,7 @@ public class DecodThread extends Decoder implements Runnable{
                         tdoaUtils.preambleType = FlagVar.DOWN_PREAMBLE;
                         tdoaUtils.timeIndex = mIndexMaxVarInfo.index;
                         tdoaUtils.TDOACounter = mTDOACounter;
-                        tdoaUtils.correspondingAnchorID = anchorID;
+//                        tdoaUtils.correspondingAnchorID = anchorID;
 
                         preambleInfoList.add(tdoaUtils);
 
@@ -138,7 +147,7 @@ public class DecodThread extends Decoder implements Runnable{
 //                        Log.v("","processTDOAInformation time:"+(date2.getTime()-date1.getTime()));
                     }
 
-                    System.out.println("zize:"+samplesList.size()+"    mLoopCounter:"+mLoopCounter+"    tdoa:"+tdoa);
+                    System.out.println("size:"+samplesList.size()+"    mLoopCounter:"+mLoopCounter+"    tdoa:"+tdoa);
                     if(mLoopCounter > 100000){
 //                        Log.e("","buffer samples size >= 300");
                         return;
@@ -154,6 +163,29 @@ public class DecodThread extends Decoder implements Runnable{
             e.printStackTrace();
         }
 
+    }
+
+    public void testGraph(float[] fft){
+        float[] data = xcorr(fft,normalization(upPreamble),true);
+        int index1 = getMaxPosFromCorrFloat(data,LPreamble);
+        synchronized (graphBuffer) {
+            System.arraycopy(data, 0, graphBuffer, 0, graphBuffer.length);
+        }
+        data = xcorr(fft,normalization(downPreamble),true);
+        int index2 = getMaxPosFromCorrFloat(data,LPreamble);
+        synchronized (graphBuffer2) {
+            System.arraycopy(data, 0, graphBuffer2, 0, graphBuffer2.length);
+        }
+
+        int tdoaTest = index2-index1;
+        System.out.println("tdoa:"+tdoaTest);
+        if(Math.abs(tdoaTest) > 30){
+            System.out.println("out of range");
+        }
+
+        Message msg = new Message();
+        msg.what = MESSAGE_GRAPH;
+        mHandler.sendMessage(msg);
     }
 
     /*

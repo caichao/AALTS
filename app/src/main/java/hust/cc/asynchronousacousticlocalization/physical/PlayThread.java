@@ -3,12 +3,17 @@ package hust.cc.asynchronousacousticlocalization.physical;
 import android.media.AudioFormat;
 import android.media.AudioManager;
 import android.media.AudioTrack;
+import android.util.Log;
 
 import java.util.Arrays;
+import java.util.Observable;
+import java.util.Observer;
 
+import hust.cc.asynchronousacousticlocalization.processing.DecodeScheduleMessage;
+import hust.cc.asynchronousacousticlocalization.processing.Decoder;
 import hust.cc.asynchronousacousticlocalization.utils.FlagVar;
 
-public class PlayThread extends Thread implements FlagVar{
+public class PlayThread extends Thread implements FlagVar, hust.cc.asynchronousacousticlocalization.processing.Observer{
 
     /*
     This thread is used to play audio samples in PCM format
@@ -19,10 +24,17 @@ public class PlayThread extends Thread implements FlagVar{
     private int validBufferLenght = 0;
     private int minBufferSize = 0;
     private short[] buffer;
-    public PlayThread(){
+
+    private final String TAG = "PlayThread";
+    private String scheduleMessageFromServer = new String();
+    private DecodeScheduleMessage decodeScheduleMessage = null;
+
+    public PlayThread(DecodeScheduleMessage decodeScheduleMessage){
     // init the data
         // create a large buffer to store the waveform samples
         buffer = new short[FlagVar.bufferSize];
+        this.decodeScheduleMessage = decodeScheduleMessage;
+        decodeScheduleMessage.addObserver(this);
     }
 
     /**
@@ -68,9 +80,16 @@ public class PlayThread extends Thread implements FlagVar{
 
         while (isRunning){
             if(isBufferReady){
+                isBufferReady = false;
                 audiotrack.play();
                 audiotrack.write(buffer,0,validBufferLenght);
             }
+        }
+
+        try{
+            audiotrack.stop();
+        }catch (Exception e){
+            e.printStackTrace();
         }
     }
 
@@ -79,5 +98,16 @@ public class PlayThread extends Thread implements FlagVar{
      */
     public void close(){
         isRunning = false;
+    }
+
+    @Override
+    public void updata(String msg) {
+        scheduleMessageFromServer = msg;
+        Log.e(TAG, "I have recived the message for secheduling");
+        if(msg.equals(FlagVar.upStr)){
+            fillBufferAndPlay(Decoder.upPreamble);
+        }else if(msg.equals(FlagVar.downStr)){
+            fillBufferAndPlay(Decoder.downPreamble);
+        }
     }
 }

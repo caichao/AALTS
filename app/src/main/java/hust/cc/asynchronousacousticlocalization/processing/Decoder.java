@@ -12,15 +12,15 @@ import hust.cc.asynchronousacousticlocalization.utils.FlagVar;
 
 public class Decoder implements FlagVar{
 
-    public short[] upPreamble = SignalGenerator.upChirpGenerator(FlagVar.Fs, FlagVar.TPreamble, FlagVar.BPreamble, FlagVar.Fmin);
-    public short[] downPreamble = SignalGenerator.downChirpGenerator(FlagVar.Fs, FlagVar.TPreamble, FlagVar.BPreamble, FlagVar.Fmax);
+    public static short[] upPreamble = SignalGenerator.upChirpGenerator(FlagVar.Fs, FlagVar.TPreamble, FlagVar.BPreamble, FlagVar.Fmin);
+    public static short[] downPreamble = SignalGenerator.downChirpGenerator(FlagVar.Fs, FlagVar.TPreamble, FlagVar.BPreamble, FlagVar.Fmax);
 
-    public short[][] upSymbolSamples = new short[][]{SignalGenerator.upChirpGenerator(FlagVar.Fs, FlagVar.TSymbol, FlagVar.BSymbol, FlagVar.FUpSymbol[0]),
+    public static short[][] upSymbolSamples = new short[][]{SignalGenerator.upChirpGenerator(FlagVar.Fs, FlagVar.TSymbol, FlagVar.BSymbol, FlagVar.FUpSymbol[0]),
             SignalGenerator.upChirpGenerator(FlagVar.Fs, FlagVar.TSymbol, FlagVar.BSymbol, FlagVar.FUpSymbol[1]),
             SignalGenerator.upChirpGenerator(FlagVar.Fs, FlagVar.TSymbol, FlagVar.BSymbol, FlagVar.FUpSymbol[2]),
             SignalGenerator.upChirpGenerator(FlagVar.Fs, FlagVar.TSymbol, FlagVar.BSymbol, FlagVar.FUpSymbol[3])
     };
-    public short[][] downSymbolSamples = new short[][]{SignalGenerator.downChirpGenerator(FlagVar.Fs, FlagVar.TSymbol, FlagVar.BSymbol, FlagVar.FDownSymbol[0]),
+    public static short[][] downSymbolSamples = new short[][]{SignalGenerator.downChirpGenerator(FlagVar.Fs, FlagVar.TSymbol, FlagVar.BSymbol, FlagVar.FDownSymbol[0]),
             SignalGenerator.downChirpGenerator(FlagVar.Fs, FlagVar.TSymbol, FlagVar.BSymbol, FlagVar.FDownSymbol[1]),
             SignalGenerator.downChirpGenerator(FlagVar.Fs, FlagVar.TSymbol, FlagVar.BSymbol, FlagVar.FDownSymbol[2]),
             SignalGenerator.downChirpGenerator(FlagVar.Fs, FlagVar.TSymbol, FlagVar.BSymbol, FlagVar.FDownSymbol[3])
@@ -40,6 +40,8 @@ public class Decoder implements FlagVar{
     public short[] symbolSamples;
     public float[] preambleFSamples;
     public float[] symbolFSamples;
+    public float[] graphBuffer;
+    public float[] graphBuffer2;
 
     public void setProcessBufferSize(int processBufferSize){
         this.processBufferSize = processBufferSize;
@@ -54,6 +56,8 @@ public class Decoder implements FlagVar{
         symbolSamples = new short[LSymbol];
         preambleFSamples = new float[preambleCorrLen];
         symbolFSamples = new float[symbolCorrLen];
+        graphBuffer = new float[preambleCorrLen];
+        graphBuffer2 = new float[preambleCorrLen];
 
     }
 
@@ -95,7 +99,7 @@ public class Decoder implements FlagVar{
      * @return: return the max value and its index
      */
 
-    public IndexMaxVarInfo getIndexMaxVarInfoFromFloats(float[] data1,float[] data2, boolean isData1FDomainSignal){
+    public IndexMaxVarInfo getIndexMaxVarInfoFromFloats(float[] data1,float[] data2, boolean isData1FDomainSignal, float threshold){
         IndexMaxVarInfo indexMaxVarInfo = new IndexMaxVarInfo();
         Date date1 = new Date();
         float[] corr = xcorr(data1,data2,isData1FDomainSignal);
@@ -106,7 +110,7 @@ public class Decoder implements FlagVar{
         indexMaxVarInfo.index = index;
         indexMaxVarInfo.maxVar = corr[(index+corr.length)%corr.length];
 
-        IndexMaxVarInfo resultInfo = preambleDetection(corr,indexMaxVarInfo);
+        IndexMaxVarInfo resultInfo = preambleDetection(corr,indexMaxVarInfo,threshold);
         date2 = new Date();
 //        Log.v("","preamble detection time:"+(date2.getTime()-date1.getTime()));
         return resultInfo;
@@ -135,18 +139,6 @@ public class Decoder implements FlagVar{
             hData2 = new float[len];
             System.arraycopy(data1,0,hData1,0,data1.length);
             System.arraycopy(data2,0,hData2,0,data2.length);
-//            for (int i = 0; i < len; i++) {
-//                if (i < data1.length) {
-//                    hData1[i] = data1[i];
-//                } else {
-//                    hData1[i] = 0;
-//                }
-//                if (i < data2.length) {
-//                    hData2[i] = data2[i];
-//                } else {
-//                    hData2[i] = 0;
-//                }
-//            }
             date1 = new Date();
             fft.realForward(hData1);
             fft.realForward(hData2);
@@ -159,13 +151,6 @@ public class Decoder implements FlagVar{
             System.arraycopy(data2,0,hData2,0,data2.length);
             date2 = new Date();
 //            Log.v("","arraycopy time:"+(date2.getTime()-date1.getTime()));
-//            for (int i = 0; i < len; i++) {
-//                if (i < data2.length) {
-//                    hData2[i] = data2[i];
-//                } else {
-//                    hData2[i] = 0;
-//                }
-//            }
             date1 = new Date();
             fft.realForward(hData2);
             date2 = new Date();
@@ -238,21 +223,21 @@ public class Decoder implements FlagVar{
      * @param reference: reference signal
      * @return: return the max value and its index
      */
-    public IndexMaxVarInfo getIndexMaxVarInfoFromSignals(short s[], short[] reference){
+    public IndexMaxVarInfo getIndexMaxVarInfoFromSignals(short s[], short[] reference,float threshold){
         float[] data1 = normalization(s);
         float[] data2 = normalization(reference);
 
-        IndexMaxVarInfo indexMaxVarInfo = getIndexMaxVarInfoFromFloats(data1,data2,false);
+        IndexMaxVarInfo indexMaxVarInfo = getIndexMaxVarInfoFromFloats(data1,data2,false,threshold);
 
         return indexMaxVarInfo;
     }
 
-    public IndexMaxVarInfo getIndexMaxVarInfoFromFAndTDomain(float[] sf, short[] reference){
+    public IndexMaxVarInfo getIndexMaxVarInfoFromFAndTDomain(float[] sf, short[] reference,float threshold){
         Date date1 = new Date();
         float[] data2 = normalization(reference);
         Date date2 = new Date();
 //        Log.v("","normalization time:"+(date2.getTime()-date1.getTime()));
-        IndexMaxVarInfo indexMaxVarInfo = getIndexMaxVarInfoFromFloats(sf,data2,true);
+        IndexMaxVarInfo indexMaxVarInfo = getIndexMaxVarInfoFromFloats(sf,data2,true,threshold);
         return indexMaxVarInfo;
     }
 
@@ -264,12 +249,12 @@ public class Decoder implements FlagVar{
      * @param reference - reference signal
      * @return correlation results with maximum value and its index
      */
-    public IndexMaxVarInfo getIndexMaxVarInfoFromSignals(short s[], int low, int high, short[] reference){
+    public IndexMaxVarInfo getIndexMaxVarInfoFromSignals(short s[], int low, int high, short[] reference, float threshold){
         short[] s0 = new short[high-low+1];
         for(int i=low;i<=high;i++){
             s0[i-low] = s[i];
         }
-        IndexMaxVarInfo indexMaxVarInfo = getIndexMaxVarInfoFromSignals(s0,reference);
+        IndexMaxVarInfo indexMaxVarInfo = getIndexMaxVarInfoFromSignals(s0,reference, threshold);
         return indexMaxVarInfo;
     }
 
@@ -377,16 +362,17 @@ public class Decoder implements FlagVar{
      * @param indexMaxVarInfo - the info of the max corr index
      * @return true indicate the presence of the corresponding preamble and vise versa
      */
-    public IndexMaxVarInfo preambleDetection(float[] corr, IndexMaxVarInfo indexMaxVarInfo){
+    public IndexMaxVarInfo preambleDetection(float[] corr, IndexMaxVarInfo indexMaxVarInfo, float threshold){
         indexMaxVarInfo.isReferenceSignalExist = false;
-//        if(indexMaxVarInfo.maxVar > FlagVar.preambleDetectionThreshold) {
+        if(indexMaxVarInfo.maxVar > FlagVar.preambleDetectionThreshold) {
             // use the ratio of peak value to the mean value of its previous 200 samples
-        int startIndex = indexMaxVarInfo.index - numberOfPreviousSamples;
-        float ratio = indexMaxVarInfo.maxVar / Algorithm.meanValue(corr, startIndex, indexMaxVarInfo.index);
-        if(ratio > ratioThreshold) {
-            indexMaxVarInfo.isReferenceSignalExist = true;
+            int startIndex = indexMaxVarInfo.index - numberOfPreviousSamples;
+            float ratio = indexMaxVarInfo.maxVar / Algorithm.meanValue(corr, startIndex, indexMaxVarInfo.index);
+            if(ratio > threshold) {
+                indexMaxVarInfo.isReferenceSignalExist = true;
+            }
+            System.out.println("index:"+indexMaxVarInfo.index+"   ratio:"+ratio+"   maxCorr:"+indexMaxVarInfo.maxVar);
         }
-//        }
         return indexMaxVarInfo;
     }
 

@@ -4,6 +4,8 @@ import java.math.BigDecimal;
 
 public interface FlagVar {
 
+    //public int anchorID = 1;
+
     //sampling rate
     public int Fs = 48000;
 
@@ -20,6 +22,7 @@ public interface FlagVar {
 
     // message type constant
     public static final int MESSAGE_TDOA = 50;
+    int MESSAGE_GRAPH = 51;
     //public static final int
 
     /*****************************************************/
@@ -45,9 +48,9 @@ public interface FlagVar {
     /*****************************************************/
 
     /***********************threshold parameters*********************/
-    public float preambleDetectionThreshold= 0.03f;
+    public float preambleDetectionThreshold= 5f;
     public int numberOfPreviousSamples = 100;
-    public float ratioThreshold = 5;
+    public float ratioThreshold = 2.5f;
     /*****************************************************/
 
     //becon message
@@ -57,4 +60,13 @@ public interface FlagVar {
     int beconMessageLength = (int)(new BigDecimal(beconMessageTime*Fs).setScale(0, BigDecimal.ROUND_HALF_UP).floatValue());
 
 
+    /*************************String value for message exchanging*****************************/
+    String upStr = "up";
+    String downStr = "down";
+    String tdoaStr = "tdoa";
+    String anchorIdStr = "anchorId";
+    String targetIdStr = "targetId";
+    String xStr = "x";
+    String yStr = "y";
+    String identityStr = "identity";
 }
