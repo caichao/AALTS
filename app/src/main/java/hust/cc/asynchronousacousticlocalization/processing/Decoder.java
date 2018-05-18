@@ -219,16 +219,25 @@ public class Decoder implements FlagVar{
      */
     public int getMaxPosFromCorrFloat(float [] corr, int chirpLength){
         float max = 0;
+        int end = 0;
         int index = 0;
         for(int i=0;i<corr.length;i++){
             if(corr[i]>max){
                 max = corr[i];
+                end = i;
                 index = i;
             }
         }
-        if(index+chirpLength>corr.length){
-            index = index-corr.length;
+        int start = end-400>0?end-400:0;
+        for(int i=start;i<=end;i++){
+            if(start >= 0.6*max){
+                index = i;
+                break;
+            }
         }
+//        if(end+chirpLength>corr.length){
+//            end = end-corr.length;
+//        }
         return index;
     }
 
