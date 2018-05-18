@@ -22,6 +22,7 @@ public interface FlagVar {
 
     // message type constant
     public static final int MESSAGE_TDOA = 50;
+    int MESSAGE_GRAPH = 51;
     //public static final int
 
     /*****************************************************/
@@ -47,9 +48,9 @@ public interface FlagVar {
     /*****************************************************/
 
     /***********************threshold parameters*********************/
-    public float preambleDetectionThreshold= 1f;
+    public float preambleDetectionThreshold= 5f;
     public int numberOfPreviousSamples = 100;
-    public float ratioThreshold = 5;
+    public float ratioThreshold = 2.5f;
     /*****************************************************/
 
     //becon message

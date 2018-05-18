@@ -40,6 +40,8 @@ public class Decoder implements FlagVar{
     public short[] symbolSamples;
     public float[] preambleFSamples;
     public float[] symbolFSamples;
+    public float[] graphBuffer;
+    public float[] graphBuffer2;
 
     public void setProcessBufferSize(int processBufferSize){
         this.processBufferSize = processBufferSize;
@@ -54,6 +56,8 @@ public class Decoder implements FlagVar{
         symbolSamples = new short[LSymbol];
         preambleFSamples = new float[preambleCorrLen];
         symbolFSamples = new float[symbolCorrLen];
+        graphBuffer = new float[preambleCorrLen];
+        graphBuffer2 = new float[preambleCorrLen];
 
     }
 
@@ -135,18 +139,6 @@ public class Decoder implements FlagVar{
             hData2 = new float[len];
             System.arraycopy(data1,0,hData1,0,data1.length);
             System.arraycopy(data2,0,hData2,0,data2.length);
-//            for (int i = 0; i < len; i++) {
-//                if (i < data1.length) {
-//                    hData1[i] = data1[i];
-//                } else {
-//                    hData1[i] = 0;
-//                }
-//                if (i < data2.length) {
-//                    hData2[i] = data2[i];
-//                } else {
-//                    hData2[i] = 0;
-//                }
-//            }
             date1 = new Date();
             fft.realForward(hData1);
             fft.realForward(hData2);
@@ -159,13 +151,6 @@ public class Decoder implements FlagVar{
             System.arraycopy(data2,0,hData2,0,data2.length);
             date2 = new Date();
 //            Log.v("","arraycopy time:"+(date2.getTime()-date1.getTime()));
-//            for (int i = 0; i < len; i++) {
-//                if (i < data2.length) {
-//                    hData2[i] = data2[i];
-//                } else {
-//                    hData2[i] = 0;
-//                }
-//            }
             date1 = new Date();
             fft.realForward(hData2);
             date2 = new Date();

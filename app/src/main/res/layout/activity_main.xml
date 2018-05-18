@@ -49,4 +49,14 @@
         android:id="@+id/button_setting"
         />
 
+    <com.jjoe64.graphview.GraphView
+        android:layout_width="match_parent"
+        android:layout_height="140dp"
+        android:id="@+id/graph"/>
+
+    <com.jjoe64.graphview.GraphView
+        android:layout_width="match_parent"
+        android:layout_height="140dp"
+        android:id="@+id/graph2"/>
+
 </LinearLayout>

@@ -5,6 +5,7 @@ import android.content.DialogInterface;
 import android.content.SharedPreferences;
 import android.os.Handler;
 import android.os.Message;
+import android.provider.ContactsContract;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -15,6 +16,10 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import com.jjoe64.graphview.GraphView;
+import com.jjoe64.graphview.series.DataPoint;
+import com.jjoe64.graphview.series.LineGraphSeries;
 
 import org.json.JSONObject;
 
@@ -47,6 +52,11 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
     @BindView(R.id.button_setting)
     Button settingButton;
 
+    @BindView(R.id.graph)
+    GraphView mGraphView;
+    @BindView(R.id.graph2)
+    GraphView mGraphView2;
+
     private AudioRecorder audioRecorder = new AudioRecorder();
     //private PlayThread playThread = new PlayThread();
     private DecodThread decodThread;
@@ -64,6 +74,8 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
     private short[] testArray1 = new short[409600];
     private short[] testArray2 = new short[409600];
     private int testI = 0;
+    private LineGraphSeries<DataPoint> mSeries;
+    private LineGraphSeries<DataPoint> mSeries2;
     //public static int targetId =
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -107,6 +119,11 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
             }
         });
 
+        mSeries = new LineGraphSeries<>();
+        mGraphView.addSeries(mSeries);
+        mSeries2 = new LineGraphSeries<>();
+        mGraphView2.addSeries(mSeries2);
+
         // thread that handle message from the server on schedule information
         decodeScheduleMessage = DecodeScheduleMessage.getInstance();
         decodeScheduleMessage.start();
@@ -123,6 +140,10 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
         Log.e(TAG, "play thread is listening");
     }
 
+    /**
+     * generate data for test
+     * @return
+     */
 
 
     @Override
@@ -223,7 +244,9 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
             System.out.println(testI);
             return;
         }*/
-        decodThread.fillSamples(data1);
+        if(decodThread.samplesList.size()<300) {
+            decodThread.fillSamples(data1);
+        }
 
     }
 
@@ -240,21 +263,48 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
 
         @Override
         public void handleMessage(Message msg) {
-            super.handleMessage(msg);
-            switch (msg.what){
-                case FlagVar.MESSAGE_TDOA:
-                // TODO here, post the tdoa information to the server
-                    StringBuilder sb = new StringBuilder();
-                    sb.append("tdoa:").append(msg.arg1).append("\n").append("id num:").append(msg.arg2);
-                    text.setText(sb.toString());
+            try {
+                super.handleMessage(msg);
+                switch (msg.what) {
+                    case FlagVar.MESSAGE_TDOA: {
+                        StringBuilder sb = new StringBuilder();
+                        sb.append("tdoa:").append(msg.arg1).append("\n").append("id num:").append(msg.arg2);
+                        text.setText(sb.toString());
 
-                    TimeStamp timeStamp = new TimeStamp(MainActivity.identity, msg.arg1);
-                    okSocket.sendTimeStamp(timeStamp);
+                        TimeStamp timeStamp = new TimeStamp(MainActivity.identity, msg.arg1);
+                        okSocket.sendTimeStamp(timeStamp);
 
-                    break;
+                        break;
+                    }
+                    case FlagVar.MESSAGE_GRAPH: {
+                        synchronized (decodThread.graphBuffer) {
+                            DataPoint[] values = getPoints(decodThread.graphBuffer);
+                            //Log.e(TAG, "sample length = " + s.length);
+                            mSeries.resetData(values);
+                        }
+                        synchronized ((decodThread.graphBuffer2)){
+                            DataPoint[] values = getPoints(decodThread.graphBuffer2);
+                            mSeries2.resetData(values);
+                        }
+                        break;
+                    }
+                }
+            }catch (Exception e){
+                e.printStackTrace();
             }
         }
     };
+
+    public DataPoint[] getPoints(float[] data){
+        DataPoint[] values = new DataPoint[data.length];
+        for (int i = 0; i < data.length; i++) {
+            double xx = i;
+            double yy = data[i];
+            DataPoint vv = new DataPoint(xx, yy);
+            values[i] = vv;
+        }
+        return values;
+    }
 
 
 }
