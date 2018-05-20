@@ -33,6 +33,7 @@ import hust.cc.asynchronousacousticlocalization.processing.DecodThread;
 import hust.cc.asynchronousacousticlocalization.processing.DecodeScheduleMessage;
 //import hust.cc.asynchronousacousticlocalization.processing.ScheduleListener;
 import hust.cc.asynchronousacousticlocalization.processing.Decoder;
+import hust.cc.asynchronousacousticlocalization.utils.FileUtils;
 import hust.cc.asynchronousacousticlocalization.utils.FlagVar;
 import hust.cc.asynchronousacousticlocalization.utils.OKSocket;
 import hust.cc.asynchronousacousticlocalization.utils.TimeStamp;
@@ -57,6 +58,8 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
     @BindView(R.id.graph2)
     GraphView mGraphView2;
 
+    private boolean isFileWritten = false;
+
     private AudioRecorder audioRecorder = new AudioRecorder();
     //private PlayThread playThread = new PlayThread();
     private DecodThread decodThread;
@@ -71,8 +74,8 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
     private String addrPortStr = "ADDR_PORT";
     private String identityStr = "IDENTITY";
     private String settingStr = "SETTING";
-    private short[] testArray1 = new short[409600];
-    private short[] testArray2 = new short[409600];
+    private short[] testArray1 = new short[409600*2];
+    private short[] testArray2 = new short[409600*2];
     private int testI = 0;
     private LineGraphSeries<DataPoint> mSeries;
     private LineGraphSeries<DataPoint> mSeries2;
@@ -235,17 +238,27 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
             data1[i] = data[2 * i];
             data2[i] = data[2 * i + 1];
         }
-        /*
-        if(testI<100){
+
+        if(testI<200){
             System.arraycopy(data1,0, testArray1,4096*testI,4096);
             System.arraycopy(data2,0, testArray2,4096*testI,4096);
             testI++;
         }else{
-            System.out.println(testI);
+            if(!isFileWritten) {
+                isFileWritten = true;
+                try {
+                    System.out.println("file write start.");
+                    FileUtils.saveBytes(testArray1, "data1");
+                    FileUtils.saveBytes(testArray2, "data2");
+                    System.out.println("file write end.");
+                }catch (Exception e){
+                    e.printStackTrace();
+                }
+            }
             return;
-        }*/
+        }
         if(decodThread.samplesList.size()<300) {
-            decodThread.fillSamples(data1);
+            decodThread.fillSamples(data2);
         }
 
     }
