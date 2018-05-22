@@ -23,6 +23,8 @@ import com.jjoe64.graphview.series.LineGraphSeries;
 
 import org.json.JSONObject;
 
+import java.net.InetAddress;
+
 import butterknife.BindView;
 import butterknife.ButterKnife;
 import butterknife.OnClick;
@@ -35,10 +37,12 @@ import hust.cc.asynchronousacousticlocalization.processing.DecodeScheduleMessage
 import hust.cc.asynchronousacousticlocalization.processing.Decoder;
 import hust.cc.asynchronousacousticlocalization.utils.FileUtils;
 import hust.cc.asynchronousacousticlocalization.utils.FlagVar;
+import hust.cc.asynchronousacousticlocalization.utils.NioClient;
 import hust.cc.asynchronousacousticlocalization.utils.OKSocket;
+import hust.cc.asynchronousacousticlocalization.utils.RspHandler;
 import hust.cc.asynchronousacousticlocalization.utils.TimeStamp;
 
-public class MainActivity extends AppCompatActivity implements AudioRecorder.RecordingCallback, OKSocket.Callback {
+public class MainActivity extends AppCompatActivity implements AudioRecorder.RecordingCallback,RspHandler.Callback{
 
 
     @BindView(R.id.omit_sound)
@@ -66,7 +70,6 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
 
     // by cc
     private DecodeScheduleMessage decodeScheduleMessage = null;
-    private OKSocket okSocket = null;
     private PlayThread playThread = null;
     private final String TAG = "MainActivity";
     public static int identity = 1;
@@ -74,12 +77,18 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
     private String addrPortStr = "ADDR_PORT";
     private String identityStr = "IDENTITY";
     private String settingStr = "SETTING";
+    NioClient client = null;
+    RspHandler rspHandler = null;
+
+
     private short[] testArray1 = new short[409600*2];
     private short[] testArray2 = new short[409600*2];
     private int testI = 0;
     private LineGraphSeries<DataPoint> mSeries;
     private LineGraphSeries<DataPoint> mSeries2;
     //public static int targetId =
+
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -132,10 +141,6 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
         decodeScheduleMessage.start();
         Log.e(TAG, "decodeSchedule thread started");
 
-        okSocket = OKSocket.getInstance();
-        okSocket.socketCallback(this);
-        //okSocket.initSocket("192.168.1.101", 22222);
-        //okSocket.start();
 
         Log.e(TAG, "socket thread start");
         playThread = new PlayThread(decodeScheduleMessage);
@@ -153,21 +158,26 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
     protected void onDestroy() {
         super.onDestroy();
 
-        okSocket.close();
         decodeScheduleMessage.removeObserver(playThread);
         decodeScheduleMessage.close();
         decodThread.close();
         playThread.close();
         audioRecorder.finishRecord();
+        rspHandler.close();
 }
 
     // ************************** UI events handling part***********************************************
     @OnClick(R.id.button_test)
     void onTestButtonClicked(){
         TimeStamp timeStamp = new TimeStamp(identity, 1234);
-        okSocket.sendTimeStamp(timeStamp);
-        Log.e(TAG, "message to the server sent");
-        Log.e(TAG, timeStamp.formatMessage().toString());
+        //okSocket.sendTimeStamp(timeStamp);
+        try {
+            client.sendMessage(timeStamp.formatMessage().toString().getBytes(), rspHandler);
+            Log.e(TAG, "message to the server sent");
+            Log.e(TAG, timeStamp.formatMessage().toString());
+        }catch (Exception e){
+            e.printStackTrace();
+        }
     }
 
     @OnClick(R.id.button_setting)
@@ -201,11 +211,22 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
                         String ipAddress = ip.getText().toString().trim();
                         int ipPort = Integer.parseInt(port.getText().toString());
                         MainActivity.identity = Integer.parseInt(identity.getText().toString());
-                        if(okSocket != null){
+                        if(client == null){
                             //commSocket.setup(ipAddress,ipPort);
                             ///commSocket.start();
-                            okSocket.initSocket(ipAddress, ipPort);
-                            okSocket.start();
+                            //okSocket.initSocket(ipAddress, ipPort);
+                            //okSocket.start();
+                            try {
+                                client = new NioClient(InetAddress.getByName(ipAddress), ipPort);
+                                Thread t = new Thread(client);
+                                t.setDaemon(true);
+                                t.start();
+                                rspHandler = new RspHandler();
+                                rspHandler.start();
+                                Log.e(TAG, "ipAddress = " + ipAddress + " port = "+ipPort);
+                            }catch (Exception e){
+                                e.printStackTrace();
+                            }
                             Toast.makeText(getApplicationContext(),"Init Socket ok",Toast.LENGTH_SHORT).show();
                         }
 
@@ -223,9 +244,7 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
 
                     }
                 }).show();
-
     }
-
 
     //************************ message handling part **************************************
 
@@ -263,12 +282,6 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
 
     }
 
-    // here we process the received message from the server about tdoa information
-    @Override
-    public void onReceiveSocketMsg(JSONObject jsonObject) {
-        Log.e(TAG, jsonObject.toString());
-    }
-
     // here we process the receiver message aboust schedule information
 
 
@@ -285,7 +298,7 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
                         text.setText(sb.toString());
 
                         TimeStamp timeStamp = new TimeStamp(MainActivity.identity, msg.arg1);
-                        okSocket.sendTimeStamp(timeStamp);
+                        //okSocket.sendTimeStamp(timeStamp);
 
                         break;
                     }
@@ -320,4 +333,8 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
     }
 
 
+    @Override
+    public void onServerResponse(String msg) {
+
+    }
 }

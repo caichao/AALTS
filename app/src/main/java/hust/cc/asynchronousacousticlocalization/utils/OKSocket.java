@@ -22,7 +22,7 @@ public class OKSocket extends Thread implements IOkSocket {
     private boolean isSocketInitOk = false;
     private char[] receivedMessage = null;
     private boolean openSendLoop = false;
-    TimeStamp timeStamp = null;
+    private TimeStamp timeStamp = null;
     private static final String TAG = "Socket channel";
     private String ip;
     private int port;
