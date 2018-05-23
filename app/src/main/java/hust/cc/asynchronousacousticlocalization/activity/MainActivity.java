@@ -35,6 +35,7 @@ import hust.cc.asynchronousacousticlocalization.processing.DecodeScheduleMessage
 import hust.cc.asynchronousacousticlocalization.processing.Decoder;
 import hust.cc.asynchronousacousticlocalization.utils.FileUtils;
 import hust.cc.asynchronousacousticlocalization.utils.FlagVar;
+import hust.cc.asynchronousacousticlocalization.utils.JniUtils;
 import hust.cc.asynchronousacousticlocalization.utils.OKSocket;
 import hust.cc.asynchronousacousticlocalization.utils.TimeStamp;
 
@@ -86,6 +87,7 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
         setContentView(R.layout.activity_main);
         ButterKnife.bind(this);
         initParams();
+        System.out.println(JniUtils.sayHello());
     }
 
     private void initParams(){
