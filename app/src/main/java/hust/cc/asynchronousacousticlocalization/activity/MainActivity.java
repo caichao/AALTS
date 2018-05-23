@@ -35,6 +35,7 @@ import hust.cc.asynchronousacousticlocalization.processing.DecodThread;
 import hust.cc.asynchronousacousticlocalization.processing.DecodeScheduleMessage;
 //import hust.cc.asynchronousacousticlocalization.processing.ScheduleListener;
 import hust.cc.asynchronousacousticlocalization.processing.Decoder;
+import hust.cc.asynchronousacousticlocalization.utils.BioClient;
 import hust.cc.asynchronousacousticlocalization.utils.FileUtils;
 import hust.cc.asynchronousacousticlocalization.utils.FlagVar;
 import hust.cc.asynchronousacousticlocalization.utils.NioClient;
@@ -77,8 +78,9 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
     private String addrPortStr = "ADDR_PORT";
     private String identityStr = "IDENTITY";
     private String settingStr = "SETTING";
-    NioClient client = null;
-    RspHandler rspHandler = null;
+    //NioClient client = null;
+    //RspHandler rspHandler = null;
+    private BioClient bioClient = null;
 
 
     private short[] testArray1 = new short[409600*2];
@@ -163,7 +165,7 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
         decodThread.close();
         playThread.close();
         audioRecorder.finishRecord();
-        rspHandler.close();
+        //rspHandler.close();
 }
 
     // ************************** UI events handling part***********************************************
@@ -172,7 +174,8 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
         TimeStamp timeStamp = new TimeStamp(identity, 1234);
         //okSocket.sendTimeStamp(timeStamp);
         try {
-            client.sendMessage(timeStamp.formatMessage().toString().getBytes(), rspHandler);
+            bioClient.send(timeStamp.formatMessage().toString());
+            //client.sendMessage(timeStamp.formatMessage().toString().getBytes(), rspHandler);
             Log.e(TAG, "message to the server sent");
             Log.e(TAG, timeStamp.formatMessage().toString());
         }catch (Exception e){
@@ -211,18 +214,23 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
                         String ipAddress = ip.getText().toString().trim();
                         int ipPort = Integer.parseInt(port.getText().toString());
                         MainActivity.identity = Integer.parseInt(identity.getText().toString());
-                        if(client == null){
+                        if(bioClient == null){
                             //commSocket.setup(ipAddress,ipPort);
                             ///commSocket.start();
                             //okSocket.initSocket(ipAddress, ipPort);
                             //okSocket.start();
                             try {
-                                client = new NioClient(InetAddress.getByName(ipAddress), ipPort);
+                                /*client = new NioClient(InetAddress.getByName(ipAddress), ipPort);
                                 Thread t = new Thread(client);
                                 t.setDaemon(true);
                                 t.start();
                                 rspHandler = new RspHandler();
-                                rspHandler.start();
+                                rspHandler.start();*/
+                                bioClient = new BioClient(ipAddress, ipPort);
+                                Thread t = new Thread(bioClient);
+                                t.setDaemon(true);
+                                t.start();
+
                                 Log.e(TAG, "ipAddress = " + ipAddress + " port = "+ipPort);
                             }catch (Exception e){
                                 e.printStackTrace();
