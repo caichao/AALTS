@@ -1,7 +1,5 @@
 package hust.cc.asynchronousacousticlocalization.processing;
 
-import android.util.Log;
-
 import org.jtransforms.fft.FloatFFT_1D;
 
 import java.util.Date;
@@ -320,7 +318,7 @@ public class Decoder implements FlagVar{
     }
 
 
-    public float[] getData1FFtFromSignals(short[] data1, int data2Len){
+    public float[] getData1HalfFFtFromSignals(short[] data1, int data2Len){
         int len = getFFTLen(data1.length,data2Len);
 
         FloatFFT_1D fft = getFFT(len);
@@ -373,11 +371,11 @@ public class Decoder implements FlagVar{
     }
 
 
-    public float[] getData1FFtFromSignals(short[] data1,int low, int high, int data2Len){
+    public float[] getData1HalfFFtFromSignals(short[] data1, int low, int high, int data2Len){
 
         short[] data0 = getPreSamples(high-low+1);
         System.arraycopy(data1,low,data0,0,high-low+1);
-        return getData1FFtFromSignals(data0,data2Len);
+        return getData1HalfFFtFromSignals(data0,data2Len);
     }
 
     public short[] getPreSamples(int len){
@@ -440,7 +438,7 @@ public class Decoder implements FlagVar{
 
         float[] maxRatios = new float[numberOfSymbols];
         float[] correlationResult = null;
-        float[] fft = getData1FFtFromSignals(s,startIndex,endIndex,upSymbolSamples[0].length);;
+        float[] fft = getData1HalfFFtFromSignals(s,startIndex,endIndex,upSymbolSamples[0].length);;
         float max = 0;
         float mean = 0;
         // use the max/mean ratio as the indicator for symbol decoding

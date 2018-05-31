@@ -22,8 +22,11 @@ import com.jjoe64.graphview.series.DataPoint;
 import com.jjoe64.graphview.series.LineGraphSeries;
 
 import org.json.JSONObject;
+import org.jtransforms.fft.FloatFFT_1D;
 
 import java.net.InetAddress;
+import java.util.Arrays;
+import java.util.Date;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
@@ -97,8 +100,79 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         ButterKnife.bind(this);
-        initParams();
-        System.out.println(JniUtils.sayHello());
+        testJni();
+//        initParams();
+    }
+
+    private void testJni(){
+        try {
+            Decoder decoder = new Decoder();
+            System.out.println(JniUtils.sayHello());
+            float[] data0 = new float[8192];
+            float[] data = new float[8192];
+            float[] dataF = new float[8192];
+            float[] dataFF = new float[8192];
+            for (int i = 0; i < Decoder.upPreamble.length; i++) {
+                data0[i] = Decoder.upPreamble[i];
+                dataFF[i] = Decoder.upPreamble[i];
+            }
+
+
+            FloatFFT_1D floatFFT_1D = new FloatFFT_1D(8192);
+            floatFFT_1D.realForward(dataFF);
+            floatFFT_1D.realForward(dataFF);
+            floatFFT_1D.realForward(dataFF);
+            floatFFT_1D.realForward(dataFF);
+            Date date1 = new Date();
+            for(int i=0;i<100;i++) {
+                System.arraycopy(data0,0,dataF,0,8192);
+                floatFFT_1D.realForward(dataF);
+            }
+            Date date2 = new Date();
+            System.out.println("java fft time:" + (date2.getTime() - date1.getTime()));
+            System.out.println("java fft size:"+dataF.length);
+            System.out.println("java fft:" + Arrays.toString(dataF));
+
+            date1 = new Date();
+            float[] corr = decoder.xcorr(dataF,dataF,true);
+            date2 = new Date();
+            System.out.println("java corr time:" + (date2.getTime() - date1.getTime()));
+            System.out.println("java corr size:"+corr.length);
+            System.out.println("java corr:" + Arrays.toString(corr));
+
+
+
+            date1 = new Date();
+            System.arraycopy(data0,0,data,0,8192);
+            float[] fft = new float[8192*2];
+            JniUtils.realForward(data,8192,fft);
+            for(int i=0;i<99;i++){
+                JniUtils.realForward(data,8192,fft);
+            }
+            date2 = new Date();
+            System.out.println("c fft time:" + (date2.getTime() - date1.getTime()));
+            System.out.println("c fft size:"+fft.length);
+            System.out.println("c fft:" + Arrays.toString(fft));
+
+            float[] corr2 = new float[8192];
+            date1 = new Date();
+            JniUtils.xcorr(fft,fft,corr2);
+            date2 = new Date();
+            System.out.println("c corr time:" + (date2.getTime() - date1.getTime()));
+            System.out.println("c corr size:"+corr2.length);
+            System.out.println("c corr:" + Arrays.toString(corr2));
+
+            FileUtils.saveBytes(corr,"corr");
+            FileUtils.saveBytes(corr2,"corr2");
+            float[] corrDiff = new float[8192];
+            for(int i=0;i<corr.length;i++){
+                corrDiff[i] = Math.abs(corr[i]-corr2[i])/corr[i];
+                System.out.println(corrDiff[i]);
+            }
+            System.out.println("");
+        }catch (Exception e){
+            e.printStackTrace();
+        }
     }
 
     private void initParams(){
@@ -268,27 +342,27 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
             data2[i] = data[2 * i + 1];
         }
 
-        if(testI<200){
-            System.arraycopy(data1,0, testArray1,4096*testI,4096);
-            System.arraycopy(data2,0, testArray2,4096*testI,4096);
-            testI++;
-        }else{
-            if(!isFileWritten) {
-                isFileWritten = true;
-                try {
-                    System.out.println("file write start.");
-                    FileUtils.saveBytes(testArray1, "data1");
-                    FileUtils.saveBytes(testArray2, "data2");
-                    System.out.println("file write end.");
-                }catch (Exception e){
-                    e.printStackTrace();
-                }
-            }
-            return;
-        }
-        if(decodThread.samplesList.size()<300) {
+//        if(testI<200){
+//            System.arraycopy(data1,0, testArray1,4096*testI,4096);
+//            System.arraycopy(data2,0, testArray2,4096*testI,4096);
+//            testI++;
+//        }else{
+//            if(!isFileWritten) {
+//                isFileWritten = true;
+//                try {
+//                    System.out.println("file write start.");
+//                    FileUtils.saveBytes(testArray1, "data1");
+//                    FileUtils.saveBytes(testArray2, "data2");
+//                    System.out.println("file write end.");
+//                }catch (Exception e){
+//                    e.printStackTrace();
+//                }
+//            }
+//            return;
+//        }
+//        if(decodThread.samplesList.size()<300) {
             decodThread.fillSamples(data2);
-        }
+//        }
 
     }
 
@@ -299,36 +373,33 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
 
         @Override
         public void handleMessage(Message msg) {
-            try {
-                super.handleMessage(msg);
-                switch (msg.what) {
-                    case FlagVar.MESSAGE_TDOA: {
-                        StringBuilder sb = new StringBuilder();
-                        sb.append("tdoa:").append(msg.arg1).append("\n").append("id num:").append(msg.arg2);
-                        text.setText(sb.toString());
+            super.handleMessage(msg);
+            switch (msg.what) {
+                case FlagVar.MESSAGE_TDOA: {
+                    StringBuilder sb = new StringBuilder();
+                    sb.append("tdoa:").append(msg.arg1).append("\n").append("id num:").append(msg.arg2);
+                    text.setText(sb.toString());
 
-                        TimeStamp timeStamp = new TimeStamp(MainActivity.identity, msg.arg1);
-                        //okSocket.sendTimeStamp(timeStamp);
+                    TimeStamp timeStamp = new TimeStamp(MainActivity.identity, msg.arg1);
+                    //okSocket.sendTimeStamp(timeStamp);
 
-                        break;
-                    }
-                    case FlagVar.MESSAGE_GRAPH: {
-                        synchronized (decodThread.graphBuffer) {
-                            DataPoint[] values = getPoints(decodThread.graphBuffer);
-                            //Log.e(TAG, "sample length = " + s.length);
-                            mSeries.resetData(values);
-                        }
-                        synchronized ((decodThread.graphBuffer2)){
-                            DataPoint[] values = getPoints(decodThread.graphBuffer2);
-                            mSeries2.resetData(values);
-                        }
-                        break;
-                    }
+                    break;
                 }
-            }catch (Exception e){
-                e.printStackTrace();
+                case FlagVar.MESSAGE_GRAPH: {
+                    synchronized (decodThread.graphBuffer) {
+                        DataPoint[] values = getPoints(decodThread.graphBuffer);
+                        //Log.e(TAG, "sample length = " + s.length);
+                        mSeries.resetData(values);
+                    }
+                    synchronized ((decodThread.graphBuffer2)){
+                        DataPoint[] values = getPoints(decodThread.graphBuffer2);
+                        mSeries2.resetData(values);
+                    }
+                    break;
+                }
             }
         }
+
     };
 
     public DataPoint[] getPoints(float[] data){
