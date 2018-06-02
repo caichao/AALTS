@@ -14,9 +14,9 @@ Java_hust_cc_asynchronousacousticlocalization_utils_JniUtils_sayHello(JNIEnv *en
 }
 
 
-JNIEXPORT void JNICALL
+JNIEXPORT jfloatArray JNICALL
 Java_hust_cc_asynchronousacousticlocalization_utils_JniUtils_realForward(JNIEnv *env, jclass jobj,
-                                                                 jfloatArray data, jint len,jfloatArray output) {
+                                                                 jfloatArray data, jint len) {
 //    jboolean isCopy;
 //    jfloat *dataP = static_cast<float*>(env->GetPrimitiveArrayCritical(data, &isCopy));
     jfloat *dataP = env->GetFloatArrayElements(data, 0);
@@ -27,17 +27,26 @@ Java_hust_cc_asynchronousacousticlocalization_utils_JniUtils_realForward(JNIEnv 
     }
 
     jfloat* sig = new jfloat[2*l];
-    for(int i=0;i<n;i++){
-        sig[2*i] = dataP[i];
+    for(int i=0;i<l;i++) {
+        if (i < n) {
+            sig[2 * i] = dataP[i];
+            sig[2 * i + 1] = 0;
+        } else{
+            sig[2*i] = 0;
+            sig[2*i+1] = 0;
+        }
+
     }
-    cdft(2*l,-1,sig);
+    cdft(2*l,-1,sig);//4096 12288
+    jfloatArray output = env->NewFloatArray(2*l);
     env->SetFloatArrayRegion(output,0,2*l,sig);
     env->ReleaseFloatArrayElements(data, dataP, 0);
 //    env->ReleasePrimitiveArrayCritical(data,dataP,0);
+    return output;
 }
 
 
-JNIEXPORT void JNICALL Java_hust_cc_asynchronousacousticlocalization_utils_JniUtils_xcorr(JNIEnv *env, jclass jobj,jfloatArray data1,jfloatArray data2,jfloatArray output){
+JNIEXPORT jfloatArray JNICALL Java_hust_cc_asynchronousacousticlocalization_utils_JniUtils_xcorr(JNIEnv *env, jclass jobj,jfloatArray data1,jfloatArray data2){
     jfloat *dataP1 = env->GetFloatArrayElements(data1, 0);
     jfloat *dataP2 = env->GetFloatArrayElements(data2, 0);
     jsize n = env->GetArrayLength(data1);
@@ -54,18 +63,17 @@ JNIEXPORT void JNICALL Java_hust_cc_asynchronousacousticlocalization_utils_JniUt
         res[2*i+1] = b*c-a*d;
     }
     cdft(n,1,res);
-    for(int i=0;i<n;i++){
+    for(int i=0;i<n/2;i++){
         float a = res[2*i];
         float b = res[2*i+1];
         corr[i] = sqrt(a*a+b*b)*2/n;
     }
+    delete [] res;
+    jfloatArray output = env->NewFloatArray(n/2);
     env->SetFloatArrayRegion(output,0,n/2,corr);
     env->ReleaseFloatArrayElements(data1, dataP1, 0);
     env->ReleaseFloatArrayElements(data2, dataP2, 0);
-
-
-
-
+    return output;
 }
 
 //JNIEXPORT void JNICALL

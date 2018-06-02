@@ -5,7 +5,6 @@ import android.content.DialogInterface;
 import android.content.SharedPreferences;
 import android.os.Handler;
 import android.os.Message;
-import android.provider.ContactsContract;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -21,10 +20,8 @@ import com.jjoe64.graphview.GraphView;
 import com.jjoe64.graphview.series.DataPoint;
 import com.jjoe64.graphview.series.LineGraphSeries;
 
-import org.json.JSONObject;
 import org.jtransforms.fft.FloatFFT_1D;
 
-import java.net.InetAddress;
 import java.util.Arrays;
 import java.util.Date;
 
@@ -39,11 +36,8 @@ import hust.cc.asynchronousacousticlocalization.processing.DecodeScheduleMessage
 //import hust.cc.asynchronousacousticlocalization.processing.ScheduleListener;
 import hust.cc.asynchronousacousticlocalization.processing.Decoder;
 import hust.cc.asynchronousacousticlocalization.utils.BioClient;
-import hust.cc.asynchronousacousticlocalization.utils.FileUtils;
 import hust.cc.asynchronousacousticlocalization.utils.FlagVar;
 import hust.cc.asynchronousacousticlocalization.utils.JniUtils;
-import hust.cc.asynchronousacousticlocalization.utils.NioClient;
-import hust.cc.asynchronousacousticlocalization.utils.OKSocket;
 import hust.cc.asynchronousacousticlocalization.utils.RspHandler;
 import hust.cc.asynchronousacousticlocalization.utils.TimeStamp;
 
@@ -100,12 +94,12 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         ButterKnife.bind(this);
-        testJni();
-//        initParams();
+//        testJni();
+        initParams();
     }
 
     private void testJni(){
-        try {
+//        try {
             Decoder decoder = new Decoder();
             System.out.println(JniUtils.sayHello());
             float[] data0 = new float[8192];
@@ -144,41 +138,38 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
 
             date1 = new Date();
             System.arraycopy(data0,0,data,0,8192);
-            float[] fft = new float[8192*2];
-            JniUtils.realForward(data,8192,fft);
+            float[] fft;
+            fft = JniUtils.realForward(data,8192);
             for(int i=0;i<99;i++){
-                JniUtils.realForward(data,8192,fft);
+                fft = JniUtils.realForward(data,8192);
             }
             date2 = new Date();
             System.out.println("c fft time:" + (date2.getTime() - date1.getTime()));
             System.out.println("c fft size:"+fft.length);
-            System.out.println("c fft:" + Arrays.toString(fft));
+//            System.out.println("c fft:" + Arrays.toString(fft));
 
-            float[] corr2 = new float[8192];
             date1 = new Date();
-            JniUtils.xcorr(fft,fft,corr2);
+            float[] corr2 = JniUtils.xcorr(fft,fft);
             date2 = new Date();
             System.out.println("c corr time:" + (date2.getTime() - date1.getTime()));
             System.out.println("c corr size:"+corr2.length);
             System.out.println("c corr:" + Arrays.toString(corr2));
 
-            FileUtils.saveBytes(corr,"corr");
-            FileUtils.saveBytes(corr2,"corr2");
-            float[] corrDiff = new float[8192];
-            for(int i=0;i<corr.length;i++){
-                corrDiff[i] = Math.abs(corr[i]-corr2[i])/corr[i];
-                System.out.println(corrDiff[i]);
-            }
-            System.out.println("");
-        }catch (Exception e){
-            e.printStackTrace();
-        }
+//            float[] corrDiff = new float[8192];
+//            for(int i=0;i<corr.length;i++){
+//                corrDiff[i] = Math.abs(corr[i]-corr2[i]);
+//                System.out.println(corrDiff[i]+" "+i);
+//            }
+//            System.out.println("");
+//        }catch (Exception e){
+//            e.printStackTrace();
+//        }
     }
 
     private void initParams(){
 
         decodThread = new DecodThread(myHandler);
-        decodThread.setProcessBufferSize(AudioRecorder.getBufferSize()/2);
+        decodThread.initialize(AudioRecorder.getBufferSize()/2,true);
         new Thread(decodThread).start();
         audioRecorder.recordingCallback(this);
         recvButton.setOnClickListener(new View.OnClickListener() {
@@ -360,9 +351,9 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
 //            }
 //            return;
 //        }
-//        if(decodThread.samplesList.size()<300) {
+        if(decodThread.samplesList.size()<300) {
             decodThread.fillSamples(data2);
-//        }
+        }
 
     }
 

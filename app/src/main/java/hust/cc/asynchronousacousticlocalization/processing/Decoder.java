@@ -6,7 +6,9 @@ import java.util.Date;
 
 import hust.cc.asynchronousacousticlocalization.physical.AudioRecorder;
 import hust.cc.asynchronousacousticlocalization.physical.SignalGenerator;
+import hust.cc.asynchronousacousticlocalization.utils.FileUtils;
 import hust.cc.asynchronousacousticlocalization.utils.FlagVar;
+import hust.cc.asynchronousacousticlocalization.utils.JniUtils;
 
 public class Decoder implements FlagVar{
 
@@ -26,6 +28,7 @@ public class Decoder implements FlagVar{
 
     // create variables to store the samples in case frequent new and return
 
+    protected boolean useJni = false;
     public int processBufferSize = 9600;
 
     public int preambleCorrLen = getFFTLen(processBufferSize+LPreamble,LPreamble);
@@ -48,8 +51,9 @@ public class Decoder implements FlagVar{
     public float[] preambleCorrFitVals;
     public float[] symbolCorrFitVals;
 
-    public void setProcessBufferSize(int processBufferSize){
+    public void initialize(int processBufferSize, boolean useJni){
         this.processBufferSize = processBufferSize;
+        this.useJni = useJni;
         bufferedSamples = new short[processBufferSize+beconMessageLength];
         preambleCorrLen = getFFTLen(processBufferSize+LPreamble,LPreamble);
         symbolCorrLen = getFFTLen(LSymbol,LSymbol);
@@ -71,21 +75,32 @@ public class Decoder implements FlagVar{
         downPreambleFFT = new float[preambleCorrLen];
         upSymbolFFTs = new float[numberOfSymbols][symbolCorrLen];
         downSymbolFFTs = new float[numberOfSymbols][symbolCorrLen];
-        for(int i=1;i<numberOfSymbols;i++){
+        for (int i = 1; i < numberOfSymbols; i++) {
             upSymbolFFTs[i] = new float[symbolCorrLen];
             downSymbolFFTs[i] = new float[symbolCorrLen];
         }
-        System.arraycopy(normalization(upPreamble),0,upPreambleFFT,0,upPreamble.length);
-        System.arraycopy(normalization(downPreamble),0,downPreambleFFT,0,downPreamble.length);
-        for(int i=0;i<numberOfSymbols;i++){
-            System.arraycopy(normalization(upSymbolSamples[i]),0,upSymbolFFTs[i],0,upSymbolSamples[i].length);
-            System.arraycopy(normalization(downSymbolSamples[i]),0,downSymbolFFTs[i],0,downSymbolSamples[i].length);
-        }
-        getFFT(preambleCorrLen).realForward(upPreambleFFT);
-        getFFT(preambleCorrLen).realForward(downPreambleFFT);
-        for(int i=0;i<numberOfSymbols;i++) {
-            getFFT(symbolCorrLen).realForward(upSymbolFFTs[i]);
-            getFFT(symbolCorrLen).realForward(downSymbolFFTs[i]);
+
+        if(!useJni) {
+            System.arraycopy(normalization(upPreamble), 0, upPreambleFFT, 0, upPreamble.length);
+            System.arraycopy(normalization(downPreamble), 0, downPreambleFFT, 0, downPreamble.length);
+            for (int i = 0; i < numberOfSymbols; i++) {
+                System.arraycopy(normalization(upSymbolSamples[i]), 0, upSymbolFFTs[i], 0, upSymbolSamples[i].length);
+                System.arraycopy(normalization(downSymbolSamples[i]), 0, downSymbolFFTs[i], 0, downSymbolSamples[i].length);
+            }
+            getFFT(preambleCorrLen).realForward(upPreambleFFT);
+            getFFT(preambleCorrLen).realForward(downPreambleFFT);
+            for (int i = 0; i < numberOfSymbols; i++) {
+                getFFT(symbolCorrLen).realForward(upSymbolFFTs[i]);
+                getFFT(symbolCorrLen).realForward(downSymbolFFTs[i]);
+            }
+        }else{
+            upPreambleFFT = JniUtils.realForward(normalization(upPreamble),preambleCorrLen);
+            downPreambleFFT = JniUtils.realForward(normalization(downPreamble),preambleCorrLen);
+            for (int i = 0; i < numberOfSymbols; i++) {
+                upSymbolFFTs[i] = JniUtils.realForward(normalization(upSymbolSamples[i]),symbolCorrLen);
+                downSymbolFFTs[i] = JniUtils.realForward(normalization(downSymbolSamples[i]),symbolCorrLen);
+            }
+
         }
 
     }
@@ -130,7 +145,13 @@ public class Decoder implements FlagVar{
 
     public IndexMaxVarInfo getIndexMaxVarInfoFromFloats(float[] data1,float[] data2, boolean isFdomain){
         IndexMaxVarInfo indexMaxVarInfo = new IndexMaxVarInfo();
-        float[] corr = xcorr(data1,data2,isFdomain);
+
+        float[] corr;
+        if(!useJni) {
+            corr = xcorr(data1, data2, isFdomain);
+        }else{
+            corr = JniUtils.xcorr(data1,data2);
+        }
         int index = getMaxPosFromCorrFloat(corr);
         indexMaxVarInfo.index = index;
         indexMaxVarInfo.maxVar = corr[(index+corr.length)%corr.length];
@@ -206,10 +227,10 @@ public class Decoder implements FlagVar{
         float max = 0;
         int end = 0;
         int index = 0;
-        Date date1 = new Date();
+//        Date date1 = new Date();
 //        float[] fitVals = getFitPosFromCorrFloat(corr,200);
-        Date date2 = new Date();
-        System.out.println("getFitPosFromCorrFloat:"+(date2.getTime()-date1.getTime()));
+//        Date date2 = new Date();
+//        System.out.println("getFitPosFromCorrFloat:"+(date2.getTime()-date1.getTime()));
         for(int i=0;i<corr.length;i++){
             if(corr[i]>max){
                 max = corr[i];
@@ -264,42 +285,12 @@ public class Decoder implements FlagVar{
         return fitVals;
     }
 
-    /**
-     * correlation results, return both the max value and its index
-     * @param s: audio samples
-     * @param reference: reference signal
-     * @return: return the max value and its index
-     */
-    public IndexMaxVarInfo getIndexMaxVarInfoFromSignals(short s[], short[] reference){
-        float[] data1 = normalization(s);
-        float[] data2 = normalization(reference);
-
-        IndexMaxVarInfo indexMaxVarInfo = getIndexMaxVarInfoFromFloats(data1,data2,false);
-
-        return indexMaxVarInfo;
-    }
 
     public IndexMaxVarInfo getIndexMaxVarInfoFromFDomain(float[] sf, float[] rf){
         IndexMaxVarInfo indexMaxVarInfo = getIndexMaxVarInfoFromFloats(sf,rf,true);
         return indexMaxVarInfo;
     }
 
-    /**
-     *  correlation results with selective range
-     * @param s - input samples
-     * @param low - the low index corresponds to the samples
-     * @param high - the high index corresponds to the samples
-     * @param reference - reference signal
-     * @return correlation results with maximum value and its index
-     */
-    public IndexMaxVarInfo getIndexMaxVarInfoFromSignals(short s[], int low, int high, short[] reference){
-        short[] s0 = new short[high-low+1];
-        for(int i=low;i<=high;i++){
-            s0[i-low] = s[i];
-        }
-        IndexMaxVarInfo indexMaxVarInfo = getIndexMaxVarInfoFromSignals(s0,reference);
-        return indexMaxVarInfo;
-    }
 
 
     public float[] xcorr(float s[], int low, int high, float[] reference){
@@ -406,8 +397,9 @@ public class Decoder implements FlagVar{
             if(ratio > ratioThreshold) {
                 indexMaxVarInfo.isReferenceSignalExist = true;
             }
-            System.out.println("index:"+indexMaxVarInfo.index+"   ratio:"+ratio+"   maxCorr:"+indexMaxVarInfo.maxVar);
+//            System.out.println("index:"+indexMaxVarInfo.index+"   ratio:"+ratio+"   maxCorr:"+indexMaxVarInfo.maxVar);
         }
+        System.out.println("index:"+indexMaxVarInfo.index+"   maxCorr:"+indexMaxVarInfo.maxVar);
         return indexMaxVarInfo;
     }
 
@@ -422,23 +414,18 @@ public class Decoder implements FlagVar{
         int startIndex = p.index + FlagVar.LPreamble + FlagVar.guardIntervalLength;
         int endIndex = startIndex + FlagVar.LSymbol - 1;
 
-        //debug
-        if(endIndex>FlagVar.beconMessageLength+ AudioRecorder.getBufferSize()){
-//            Log.v("","endIndex:"+endIndex);
-            StringBuilder sb = new StringBuilder();
-            for(int i=0;i<s.length;i++){
-                sb.append(s[i]).append(",");
-                if(i%600 == 0){
-                    sb.append("\n");
-                }
-            }
-//            Log.v("","data:"+sb.toString());
-        }
-
-
         float[] maxRatios = new float[numberOfSymbols];
         float[] correlationResult = null;
-        float[] fft = getData1HalfFFtFromSignals(s,startIndex,endIndex,upSymbolSamples[0].length);;
+
+        float[] fft;
+        if(!useJni) {
+            fft = getData1HalfFFtFromSignals(s, startIndex, endIndex, upSymbolSamples[0].length);
+        }
+        else{
+            float[] sampleF = normalization(s,startIndex,endIndex);
+            fft = JniUtils.realForward(sampleF,2*LSymbol);
+            System.out.println("");
+        }
         float max = 0;
         float mean = 0;
         // use the max/mean ratio as the indicator for symbol decoding
