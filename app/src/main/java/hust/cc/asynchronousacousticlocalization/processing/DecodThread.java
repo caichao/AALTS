@@ -54,9 +54,9 @@ public class DecodThread extends Decoder implements Runnable{
         try {
             while (isThreadRunning) {
                 if (samplesList.size() >= 3) {
-                    Date dateS = new Date();
+                    Date date1,dateS = new Date();
+                    Date date2;
                     synchronized (samplesList) {
-                        Date date1 = new Date();
                         System.arraycopy(samplesList.get(0),processBufferSize-LPreamble,bufferedSamples,0,LPreamble);
                         System.arraycopy(samplesList.get(1),0,bufferedSamples,LPreamble,processBufferSize);
                         System.arraycopy(samplesList.get(2),0,bufferedSamples,processBufferSize+LPreamble,beconMessageLength-LPreamble);
@@ -64,7 +64,6 @@ public class DecodThread extends Decoder implements Runnable{
                         samplesList.remove(0);
 
                     }
-
                     mLoopCounter++;
                     //compute the fft of the bufferedSamples, it will be used twice. It's computed here to reduce time cost.
                     float[] fft;
@@ -72,8 +71,10 @@ public class DecodThread extends Decoder implements Runnable{
                         fft = getData1HalfFFtFromSignals(bufferedSamples, 0, processBufferSize + LPreamble - 1, upPreamble.length);
                     }else {
                         float[] samplesF = normalization(bufferedSamples,0,processBufferSize+LPreamble-1);
+                        date1 = new Date();
                         fft = JniUtils.realForward(samplesF,samplesF.length+ LPreamble);
-                        System.out.println("");
+                        date2 = new Date();
+//                        System.out.println("fft time:"+(date2.getTime()-date1.getTime()));
                     }
 
                     //open this to see corr in graphs
@@ -90,7 +91,7 @@ public class DecodThread extends Decoder implements Runnable{
                     if (mIndexMaxVarInfo.isReferenceSignalExist && !isSignalRepeatedDetected(mIndexMaxVarInfo,processBufferSize) ) {
                         mTDOACounter++;
                         int anchorID = decodeAnchorID(bufferedSamples, true, mIndexMaxVarInfo);
-                        System.out.println("anchorID 1:"+anchorID+"   ");
+//                        System.out.println("anchorID 1:"+anchorID+"   ");
                         TDOAUtils tdoaUtils = new TDOAUtils();
                         // store the timming information
                         tdoaUtils.loopIndex = mLoopCounter;
@@ -112,7 +113,7 @@ public class DecodThread extends Decoder implements Runnable{
                     if (mIndexMaxVarInfo.isReferenceSignalExist && !isSignalRepeatedDetected(mIndexMaxVarInfo,processBufferSize) ) {
                         mTDOACounter++;
                         int anchorID = decodeAnchorID(bufferedSamples, false, mIndexMaxVarInfo);
-                        System.out.println("anchorID 2:"+anchorID+"   ");
+//                        System.out.println("anchorID 2:"+anchorID+"   ");
                         TDOAUtils tdoaUtils = new TDOAUtils();
                         tdoaUtils.loopIndex = mLoopCounter;
                         tdoaUtils.preambleType = FlagVar.DOWN_PREAMBLE;
@@ -140,7 +141,11 @@ public class DecodThread extends Decoder implements Runnable{
                     if((Math.abs(tdoa)>30 && Math.abs(tdoa) < 200000)) {
                         Log.v("","tdoa:"+tdoa);
                     }
+                    Date dateE = new Date();
+                    System.out.println("total time:"+(dateE.getTime()-dateS.getTime()));
                 }
+
+
             }
         }catch (Exception e){
             e.printStackTrace();

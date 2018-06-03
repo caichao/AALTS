@@ -245,7 +245,7 @@ public class Decoder implements FlagVar{
                 break;
             }
         }
-        return end;
+        return index;
     }
 
     public float[] getFitPosFromCorrFloat(float [] corr, int halfBlockLength){
@@ -431,16 +431,14 @@ public class Decoder implements FlagVar{
         // use the max/mean ratio as the indicator for symbol decoding
         if(isUpSymbol) {
             for (int i = 0; i < numberOfSymbols; i++) {
-                correlationResult = xcorr(fft,upSymbolFFTs[i],true);
-//                correlationResult = xcorrSignal(s, startIndex, endIndex, upSymbolSamples[i]);
+                correlationResult = useJni?JniUtils.xcorr(fft,upSymbolFFTs[i]):xcorr(fft,upSymbolFFTs[i],true);
                 max = Algorithm.getMaxInfo(correlationResult, 0, correlationResult.length).maxVar;
                 mean = Algorithm.meanValue(correlationResult, 0, correlationResult.length);
                 maxRatios[i] = max / mean;
             }
         }else{
             for (int i = 0; i < numberOfSymbols; i++) {
-                correlationResult = xcorr(fft,downSymbolFFTs[i],true);
-//                correlationResult = xcorrSignal(s, startIndex, endIndex, downSymbolSamples[i]);
+                correlationResult = useJni?JniUtils.xcorr(fft,downSymbolFFTs[i]):xcorr(fft,downSymbolFFTs[i],true);
                 max = Algorithm.getMaxInfo(correlationResult, 0, correlationResult.length).maxVar;
                 mean = Algorithm.meanValue(correlationResult, 0, correlationResult.length);
                 maxRatios[i] = max / mean;
