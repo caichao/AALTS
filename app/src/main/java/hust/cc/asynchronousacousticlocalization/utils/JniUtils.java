@@ -7,7 +7,7 @@ public class JniUtils {
     }
     public static native String sayHello();
 
-    public static native float[] realForward(float[] data, int len);
+    public static native float[] fft(float[] data, int len);
 
     public static native float[] xcorr(float[] data1,float[] data2);
 

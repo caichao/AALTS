@@ -15,7 +15,7 @@ Java_hust_cc_asynchronousacousticlocalization_utils_JniUtils_sayHello(JNIEnv *en
 
 
 JNIEXPORT jfloatArray JNICALL
-Java_hust_cc_asynchronousacousticlocalization_utils_JniUtils_realForward(JNIEnv *env, jclass jobj,
+Java_hust_cc_asynchronousacousticlocalization_utils_JniUtils_fft(JNIEnv *env, jclass jobj,
                                                                  jfloatArray data, jint len) {
 //    jboolean isCopy;
 //    jfloat *dataP = static_cast<float*>(env->GetPrimitiveArrayCritical(data, &isCopy));
@@ -77,7 +77,7 @@ JNIEXPORT jfloatArray JNICALL Java_hust_cc_asynchronousacousticlocalization_util
 }
 
 //JNIEXPORT void JNICALL
-//JavaCritical_hust_cc_asynchronousacousticlocalization_utils_JniUtils_realForward(jint length,jfloat* data) {
+//JavaCritical_hust_cc_asynchronousacousticlocalization_utils_JniUtils_fft(jint length,jfloat* data) {
 //    jfloat* sig = new jfloat[2*length];
 //    for(int i=0;i<length;i++){
 //        sig[2*i] = data[i];

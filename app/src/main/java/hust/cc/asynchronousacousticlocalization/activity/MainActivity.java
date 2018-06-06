@@ -50,6 +50,8 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
     Button recvButton;
     @BindView(R.id.text)
     TextView text;
+    @BindView(R.id.text2)
+    TextView text2;
     // by cc
     @BindView(R.id.button_test)
     Button testButton;
@@ -60,6 +62,7 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
     GraphView mGraphView;
     @BindView(R.id.graph2)
     GraphView mGraphView2;
+
 
     private boolean isFileWritten = false;
 
@@ -99,7 +102,7 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
     }
 
     private void testJni(){
-//        try {
+        try {
             Decoder decoder = new Decoder();
             System.out.println(JniUtils.sayHello());
             float[] data0 = new float[8192];
@@ -139,9 +142,9 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
             date1 = new Date();
             System.arraycopy(data0,0,data,0,8192);
             float[] fft;
-            fft = JniUtils.realForward(data,8192);
+            fft = JniUtils.fft(data,8192);
             for(int i=0;i<99;i++){
-                fft = JniUtils.realForward(data,8192);
+                fft = JniUtils.fft(data,8192);
             }
             date2 = new Date();
             System.out.println("c fft time:" + (date2.getTime() - date1.getTime()));
@@ -163,11 +166,15 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
 //            System.out.println("");
 //        }catch (Exception e){
 //            e.printStackTrace();
-//        }
+        }catch (Exception e){
+            e.printStackTrace();
+        }
     }
 
     private void initParams(){
 
+        mGraphView.setVisibility(View.GONE);
+        mGraphView2.setVisibility(View.GONE);
         decodThread = new DecodThread(myHandler);
         decodThread.initialize(AudioRecorder.getBufferSize()/2,true);
         new Thread(decodThread).start();
@@ -368,7 +375,7 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
             switch (msg.what) {
                 case FlagVar.MESSAGE_TDOA: {
                     StringBuilder sb = new StringBuilder();
-                    sb.append("tdoa:").append(msg.arg1).append("\n").append("id num:").append(msg.arg2);
+                    sb.append("tdoa:").append(msg.arg1).append("    ").append("id num:").append(msg.arg2);
                     text.setText(sb.toString());
 
                     TimeStamp timeStamp = new TimeStamp(MainActivity.identity, msg.arg1);
@@ -386,6 +393,12 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
                         DataPoint[] values = getPoints(decodThread.graphBuffer2);
                         mSeries2.resetData(values);
                     }
+                    break;
+                }
+                case FlagVar.MESSAGE_SPEED:{
+                    StringBuilder sb = new StringBuilder();
+                    sb.append("speed:").append(msg.arg1);
+                    text2.setText(sb.toString());
                     break;
                 }
             }

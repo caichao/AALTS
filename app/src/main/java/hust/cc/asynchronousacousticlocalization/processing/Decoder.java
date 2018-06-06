@@ -2,11 +2,10 @@ package hust.cc.asynchronousacousticlocalization.processing;
 
 import org.jtransforms.fft.FloatFFT_1D;
 
-import java.util.Date;
+import java.util.LinkedList;
+import java.util.List;
 
-import hust.cc.asynchronousacousticlocalization.physical.AudioRecorder;
 import hust.cc.asynchronousacousticlocalization.physical.SignalGenerator;
-import hust.cc.asynchronousacousticlocalization.utils.FileUtils;
 import hust.cc.asynchronousacousticlocalization.utils.FlagVar;
 import hust.cc.asynchronousacousticlocalization.utils.JniUtils;
 
@@ -94,11 +93,11 @@ public class Decoder implements FlagVar{
                 getFFT(symbolCorrLen).realForward(downSymbolFFTs[i]);
             }
         }else{
-            upPreambleFFT = JniUtils.realForward(normalization(upPreamble),preambleCorrLen);
-            downPreambleFFT = JniUtils.realForward(normalization(downPreamble),preambleCorrLen);
+            upPreambleFFT = JniUtils.fft(normalization(upPreamble),preambleCorrLen);
+            downPreambleFFT = JniUtils.fft(normalization(downPreamble),preambleCorrLen);
             for (int i = 0; i < numberOfSymbols; i++) {
-                upSymbolFFTs[i] = JniUtils.realForward(normalization(upSymbolSamples[i]),symbolCorrLen);
-                downSymbolFFTs[i] = JniUtils.realForward(normalization(downSymbolSamples[i]),symbolCorrLen);
+                upSymbolFFTs[i] = JniUtils.fft(normalization(upSymbolSamples[i]),symbolCorrLen);
+                downSymbolFFTs[i] = JniUtils.fft(normalization(downSymbolSamples[i]),symbolCorrLen);
             }
 
         }
@@ -152,7 +151,7 @@ public class Decoder implements FlagVar{
         }else{
             corr = JniUtils.xcorr(data1,data2);
         }
-        int index = getMaxPosFromCorrFloat(corr);
+        int index = getMaxPosFromCorr(corr);
         indexMaxVarInfo.index = index;
         indexMaxVarInfo.maxVar = corr[(index+corr.length)%corr.length];
 
@@ -223,7 +222,7 @@ public class Decoder implements FlagVar{
      * @param corr
      * @return
      */
-    public int getMaxPosFromCorrFloat(float [] corr){
+    public int getMaxPosFromCorr(float [] corr){
         float max = 0;
         int end = 0;
         int index = 0;
@@ -423,7 +422,7 @@ public class Decoder implements FlagVar{
         }
         else{
             float[] sampleF = normalization(s,startIndex,endIndex);
-            fft = JniUtils.realForward(sampleF,2*LSymbol);
+            fft = JniUtils.fft(sampleF,2*LSymbol);
             System.out.println("");
         }
         float max = 0;
@@ -432,15 +431,15 @@ public class Decoder implements FlagVar{
         if(isUpSymbol) {
             for (int i = 0; i < numberOfSymbols; i++) {
                 correlationResult = useJni?JniUtils.xcorr(fft,upSymbolFFTs[i]):xcorr(fft,upSymbolFFTs[i],true);
-                max = Algorithm.getMaxInfo(correlationResult, 0, correlationResult.length).maxVar;
-                mean = Algorithm.meanValue(correlationResult, 0, correlationResult.length);
+                max = Algorithm.getMaxInfo(correlationResult, 0, correlationResult.length-1).maxVar;
+                mean = Algorithm.meanValue(correlationResult, 0, correlationResult.length-1);
                 maxRatios[i] = max / mean;
             }
         }else{
             for (int i = 0; i < numberOfSymbols; i++) {
                 correlationResult = useJni?JniUtils.xcorr(fft,downSymbolFFTs[i]):xcorr(fft,downSymbolFFTs[i],true);
-                max = Algorithm.getMaxInfo(correlationResult, 0, correlationResult.length).maxVar;
-                mean = Algorithm.meanValue(correlationResult, 0, correlationResult.length);
+                max = Algorithm.getMaxInfo(correlationResult, 0, correlationResult.length-1).maxVar;
+                mean = Algorithm.meanValue(correlationResult, 0, correlationResult.length-1);
                 maxRatios[i] = max / mean;
             }
         }
@@ -462,6 +461,70 @@ public class Decoder implements FlagVar{
             return false;
         }
     }
+
+    public float getFshift(float[] data, int[] sinSigFs, int len, int rangeF, int fs){
+        int a = 1;
+        while (a < len){
+            a = a*2;
+        }
+        if(a != len){
+            throw new RuntimeException("len should be power of 2.");
+        }
+        if(sinSigFs.length >= 2){
+            for(int i=1;i<sinSigFs.length;i++){
+                if(sinSigFs[i] <= sinSigFs[i-1]){
+                    throw new RuntimeException("sinSigFs should be increasing.");
+                }
+            }
+        }
+        float[] fft = JniUtils.fft(data,len);
+
+        float[] absfft = new float[fft.length/2];
+        for(int i=0;i<absfft.length;i++){
+            absfft[i] = Math.abs(fft[2*i]*fft[2*i]+fft[2*i+1]*fft[2*i+1]);
+        }
+        List<int[]> detectIntervals = new LinkedList<int[]>();
+        for(int i=0;i<sinSigFs.length;i++){
+            detectIntervals.add(getDetectInterval(len,fs,rangeF,sinSigFs[i]));
+            if(i >=1){
+                if(detectIntervals.get(i)[0] <= detectIntervals.get(i-1)[1]){
+                    throw new RuntimeException("the start of the detectInterval shold be bigger than the end of the last interval.");
+                }
+            }
+        }
+        float[] detectFs = new float[sinSigFs.length];
+        for(int i=0;i<detectFs.length;i++){
+            IndexMaxVarInfo info = Algorithm.getMaxInfo(absfft,detectIntervals.get(i)[0],detectIntervals.get(i)[1]);
+            detectFs[i] = 1.0f*info.index*fs/len;
+        }
+        return fShiftCalculate(sinSigFs,detectFs);
+    }
+
+    public float fShiftCalculate(int[] sinSigFs, float[] detectFs){
+        if(sinSigFs.length != detectFs.length){
+            throw new RuntimeException("sinSigFs should have the same size of detectFs");
+        }
+        float fShift = 0;
+        for(int i=0;i<sinSigFs.length;i++){
+            fShift += sinSigFs[i]-detectFs[i];
+        }
+        fShift /= sinSigFs.length;
+        return  fShift;
+
+    }
+
+
+
+    public int[] getDetectInterval(int len, int fs,int detectRangeF,int sinSigF){
+        int[] interval = new int[2];
+        interval[0] = (sinSigF-detectRangeF)*len/fs;
+        interval[1] = (sinSigF+detectRangeF)*len/fs;
+        return interval;
+    }
+
+
+
+
 
 
 }

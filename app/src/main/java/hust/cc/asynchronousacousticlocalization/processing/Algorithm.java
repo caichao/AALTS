@@ -56,10 +56,11 @@ public class Algorithm {
      * @return class IndexMaxVarInfo that contains both the max value and its index in the array
      */
     public static IndexMaxVarInfo getMaxInfo(float s[], int low, int high){
+        outOfRangeDetection(s.length,low,high);
         IndexMaxVarInfo indexMaxVarInfo = new IndexMaxVarInfo();
         indexMaxVarInfo.index = low;
         indexMaxVarInfo.maxVar = s[low];
-        for(int i = low; i < high; i++){
+        for(int i = low; i <= high; i++){
             if(s[i] > indexMaxVarInfo.maxVar){
                 indexMaxVarInfo.maxVar = s[i];
                 indexMaxVarInfo.index = i;
@@ -76,10 +77,11 @@ public class Algorithm {
      * @return both the max value and its corresponding index
      */
     public static IndexMaxVarInfo getMaxInfo(short s[], int low, int high){
+        outOfRangeDetection(s.length,low,high);
         IndexMaxVarInfo indexMaxVarInfo = new IndexMaxVarInfo();
         indexMaxVarInfo.index = low;
         indexMaxVarInfo.maxVar = s[low];
-        for(int i = low; i < high; i++){
+        for(int i = low; i <= high; i++){
             if(s[i] > indexMaxVarInfo.maxVar){
                 indexMaxVarInfo.maxVar = s[i];
                 indexMaxVarInfo.index = i;
@@ -90,7 +92,7 @@ public class Algorithm {
 
     public static float meanValue(float[] s, int low, int high){
         float sum = 0;
-        for(int i = low ; i < high ; i++){
+        for(int i = low ; i <= high ; i++){
             sum += s[(i+s.length)%s.length];
         }
         sum /= (high - low + 1);
@@ -98,11 +100,22 @@ public class Algorithm {
     }
 
     public static short meanValue(short[] s, int low, int high){
+        outOfRangeDetection(s.length,low,high);
         long sum = 0;
         for(int i = low ; i < high ; i++){
             sum += s[i];
         }
         sum /= (high - low + 1);
         return (short) sum;
+    }
+
+    public static void outOfRangeDetection(int len, int low, int high){
+        if(low <= high && low >= 0 && high < len){
+            return;
+        }else{
+            System.out.println("len:"+len+"  low:"+low+"  high:"+high);
+            throw new RuntimeException("out of range.");
+        }
+
     }
 }

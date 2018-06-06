@@ -72,7 +72,7 @@ public class DecodThread extends Decoder implements Runnable{
                     }else {
                         float[] samplesF = normalization(bufferedSamples,0,processBufferSize+LPreamble-1);
                         date1 = new Date();
-                        fft = JniUtils.realForward(samplesF,samplesF.length+ LPreamble);
+                        fft = JniUtils.fft(samplesF,samplesF.length+ LPreamble);
                         date2 = new Date();
 //                        System.out.println("fft time:"+(date2.getTime()-date1.getTime()));
                     }
@@ -125,6 +125,13 @@ public class DecodThread extends Decoder implements Runnable{
 
                     }
 
+                    float fshift = getFshift(normalization(bufferedSamples),sinSigF,speedDetectionSigLength,speedDetectionRangeF,Fs);
+                    float speed = (int)(fshift*soundSpeed/Fs);
+                    Message msg = new Message();
+                    msg.what = MESSAGE_SPEED;
+                    msg.arg1 = (int)speed;
+                    mHandler.sendMessage(msg);
+
                     int tdoa = Integer.MIN_VALUE;
                     // 4. process the TDOA time information
                     if (mTDOACounter >= 2) {// receive two TDOA timming information
@@ -155,12 +162,12 @@ public class DecodThread extends Decoder implements Runnable{
 
     public void testGraph(float[] fft){
         float[] data = xcorr(fft,normalization(upPreamble),true);
-        int index1 = getMaxPosFromCorrFloat(data);
+        int index1 = getMaxPosFromCorr(data);
         synchronized (graphBuffer) {
             System.arraycopy(data, 0, graphBuffer, 0, graphBuffer.length);
         }
         data = xcorr(fft,normalization(downPreamble),true);
-        int index2 = getMaxPosFromCorrFloat(data);
+        int index2 = getMaxPosFromCorr(data);
         synchronized (graphBuffer2) {
             System.arraycopy(data, 0, graphBuffer2, 0, graphBuffer2.length);
         }
