@@ -57,9 +57,9 @@ public class DecodThread extends Decoder implements Runnable{
                     Date date1,dateS = new Date();
                     Date date2;
                     synchronized (samplesList) {
-                        System.arraycopy(samplesList.get(0),processBufferSize-LPreamble,bufferedSamples,0,LPreamble);
-                        System.arraycopy(samplesList.get(1),0,bufferedSamples,LPreamble,processBufferSize);
-                        System.arraycopy(samplesList.get(2),0,bufferedSamples,processBufferSize+LPreamble,beconMessageLength-LPreamble);
+                        System.arraycopy(samplesList.get(0),processBufferSize-LPreamble-startBeforeMaxCorr,bufferedSamples,0,LPreamble+startBeforeMaxCorr);
+                        System.arraycopy(samplesList.get(1),0,bufferedSamples,LPreamble+startBeforeMaxCorr,processBufferSize);
+                        System.arraycopy(samplesList.get(2),0,bufferedSamples,processBufferSize+LPreamble+startBeforeMaxCorr,beconMessageLength-LPreamble);
 
                         samplesList.remove(0);
 
@@ -68,27 +68,21 @@ public class DecodThread extends Decoder implements Runnable{
                     //compute the fft of the bufferedSamples, it will be used twice. It's computed here to reduce time cost.
                     float[] fft;
                     if(!useJni) {
-                        fft = getData1HalfFFtFromSignals(bufferedSamples, 0, processBufferSize + LPreamble - 1, upPreamble.length);
+                        fft = getData1HalfFFtFromSignals(bufferedSamples, 0, processBufferSize+LPreamble+startBeforeMaxCorr- 1, upPreamble.length);
                     }else {
-                        float[] samplesF = normalization(bufferedSamples,0,processBufferSize+LPreamble-1);
-                        date1 = new Date();
+                        float[] samplesF = normalization(bufferedSamples,0,processBufferSize+LPreamble+startBeforeMaxCorr-1);
                         fft = JniUtils.fft(samplesF,samplesF.length+ LPreamble);
-                        date2 = new Date();
-//                        System.out.println("fft time:"+(date2.getTime()-date1.getTime()));
                     }
 
                     //open this to see corr in graphs
 //                    testGraph(fft);
-//                    if(true) {
-//                        continue;
-//                    }
 
                     // 1. the first step is to check the existence of preamble either up or down
                     mIndexMaxVarInfo.isReferenceSignalExist = false;
                     mIndexMaxVarInfo = getIndexMaxVarInfoFromFDomain(fft,upPreambleFFT);
 
                     // 2. if the preamble exist, then decode the anchor ID
-                    if (mIndexMaxVarInfo.isReferenceSignalExist && !isSignalRepeatedDetected(mIndexMaxVarInfo,processBufferSize) ) {
+                    if (mIndexMaxVarInfo.isReferenceSignalExist && isIndexAvailable(mIndexMaxVarInfo) ) {
                         mTDOACounter++;
                         int anchorID = decodeAnchorID(bufferedSamples, true, mIndexMaxVarInfo);
 //                        System.out.println("anchorID 1:"+anchorID+"   ");
@@ -103,14 +97,11 @@ public class DecodThread extends Decoder implements Runnable{
                         preambleInfoList.add(tdoaUtils);
 
                     }
-                    if(!mIndexMaxVarInfo.isReferenceSignalExist){
-//                        System.out.println("false");
-                    }
 
                     // 3. check the down preamble and do the above operation again
                     mIndexMaxVarInfo.isReferenceSignalExist = false;
                     mIndexMaxVarInfo = getIndexMaxVarInfoFromFDomain(fft,downPreambleFFT);
-                    if (mIndexMaxVarInfo.isReferenceSignalExist && !isSignalRepeatedDetected(mIndexMaxVarInfo,processBufferSize) ) {
+                    if (mIndexMaxVarInfo.isReferenceSignalExist && isIndexAvailable(mIndexMaxVarInfo) ) {
                         mTDOACounter++;
                         int anchorID = decodeAnchorID(bufferedSamples, false, mIndexMaxVarInfo);
 //                        System.out.println("anchorID 2:"+anchorID+"   ");
@@ -125,12 +116,8 @@ public class DecodThread extends Decoder implements Runnable{
 
                     }
 
-                    float fshift = getFshift(normalization(bufferedSamples),sinSigF,speedDetectionSigLength,speedDetectionRangeF,Fs);
-                    float speed = (int)(fshift*soundSpeed/Fs);
-                    Message msg = new Message();
-                    msg.what = MESSAGE_SPEED;
-                    msg.arg1 = (int)speed;
-                    mHandler.sendMessage(msg);
+
+//                    processSpeedInformation();
 
                     int tdoa = Integer.MIN_VALUE;
                     // 4. process the TDOA time information
@@ -160,14 +147,23 @@ public class DecodThread extends Decoder implements Runnable{
 
     }
 
+    public void processSpeedInformation(){
+        float fshift = getFshift(normalization(bufferedSamples),sinSigF,speedDetectionSigLength,speedDetectionRangeF,Fs);
+        float speed = (int)(fshift*soundSpeed/Fs);
+        Message msg = new Message();
+        msg.what = MESSAGE_SPEED;
+        msg.arg1 = (int)speed;
+        mHandler.sendMessage(msg);
+    }
+
     public void testGraph(float[] fft){
         float[] data = xcorr(fft,normalization(upPreamble),true);
-        int index1 = getMaxPosFromCorr(data);
+        int index1 = getFitPosFromCorr(data);
         synchronized (graphBuffer) {
             System.arraycopy(data, 0, graphBuffer, 0, graphBuffer.length);
         }
         data = xcorr(fft,normalization(downPreamble),true);
-        int index2 = getMaxPosFromCorr(data);
+        int index2 = getFitPosFromCorr(data);
         synchronized (graphBuffer2) {
             System.arraycopy(data, 0, graphBuffer2, 0, graphBuffer2.length);
         }

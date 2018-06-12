@@ -53,8 +53,8 @@ public class Decoder implements FlagVar{
     public void initialize(int processBufferSize, boolean useJni){
         this.processBufferSize = processBufferSize;
         this.useJni = useJni;
-        bufferedSamples = new short[processBufferSize+beconMessageLength];
-        preambleCorrLen = getFFTLen(processBufferSize+LPreamble,LPreamble);
+        bufferedSamples = new short[processBufferSize+beconMessageLength+startBeforeMaxCorr];
+        preambleCorrLen = getFFTLen(processBufferSize+LPreamble+startBeforeMaxCorr,LPreamble);
         symbolCorrLen = getFFTLen(LSymbol,LSymbol);
         preambleDetectionFFT = new FloatFFT_1D(preambleCorrLen);
         symbolDectectionFFT = new FloatFFT_1D(symbolCorrLen);
@@ -110,7 +110,7 @@ public class Decoder implements FlagVar{
         return processBufferSize;
     }
 
-    public short[] bufferedSamples = new short[processBufferSize+beconMessageLength];
+    public short[] bufferedSamples = new short[processBufferSize+beconMessageLength+startBeforeMaxCorr];
 
 
     /**
@@ -151,9 +151,10 @@ public class Decoder implements FlagVar{
         }else{
             corr = JniUtils.xcorr(data1,data2);
         }
-        int index = getMaxPosFromCorr(corr);
+
+        int index = getFitPosFromCorr(corr);
         indexMaxVarInfo.index = index;
-        indexMaxVarInfo.maxVar = corr[(index+corr.length)%corr.length];
+        indexMaxVarInfo.fitCorrVal = corr[index];
 
         IndexMaxVarInfo resultInfo = preambleDetection(corr,indexMaxVarInfo);
         return resultInfo;
@@ -222,52 +223,42 @@ public class Decoder implements FlagVar{
      * @param corr
      * @return
      */
-    public int getMaxPosFromCorr(float [] corr){
+    public int getFitPosFromCorr(float [] corr){
         float max = 0;
         int end = 0;
         int index = 0;
-//        Date date1 = new Date();
-//        float[] fitVals = getFitPosFromCorrFloat(corr,200);
-//        Date date2 = new Date();
-//        System.out.println("getFitPosFromCorrFloat:"+(date2.getTime()-date1.getTime()));
-        for(int i=0;i<corr.length;i++){
-            if(corr[i]>max){
-                max = corr[i];
+        float[] fitVals = getFitValsFromCorr(corr);
+        for(int i=0;i<fitVals.length;i++){
+            if(fitVals[i]>max){
+                max = fitVals[i];
                 end = i;
                 index = i;
             }
         }
         int start = end-400>0?end-400:0;
         for(int i=start;i<=end;i++){
-            if(corr[i] >= 0.6*max){
+            if(fitVals[i] >= 0.6*max){
                 index = i;
                 break;
             }
         }
-        return index;
+        return end;
     }
 
-    public float[] getFitPosFromCorrFloat(float [] corr, int halfBlockLength){
+    public float[] getFitValsFromCorr(float [] corr){
         float[] fitVals = getFitVals(corr.length);
         float val = 0;
-        for(int i=0;i<halfBlockLength*2+1;i++){
+        for(int i=0;i<startBeforeMaxCorr-endBeforeMaxCorr;i++){
             val += corr[i];
         }
-        for(int i=halfBlockLength;i<corr.length-halfBlockLength-1;i++){
+        for(int i=startBeforeMaxCorr;i<corr.length;i++){
             fitVals[i] = val;
-            val -= corr[i-halfBlockLength];
-            val += corr[i+halfBlockLength+1];
+            val -= corr[i-startBeforeMaxCorr];
+            val += corr[i-endBeforeMaxCorr];
+
         }
-        fitVals[corr.length-halfBlockLength-1] = val;
-        for(int i=0;i<halfBlockLength;i++){
-            fitVals[i] = fitVals[halfBlockLength];
-        }
-        for(int i=corr.length-halfBlockLength;i<corr.length;i++){
-            fitVals[i] = fitVals[corr.length-halfBlockLength-1];
-        }
-        float blockLengh = 2*halfBlockLength+1;
-        for(int i=0;i<corr.length;i++){
-            fitVals[i] = corr[i]*blockLengh/fitVals[i];
+        for(int i=startBeforeMaxCorr;i<corr.length;i++){
+            fitVals[i] = corr[i]*(startBeforeMaxCorr-endBeforeMaxCorr)/fitVals[i];
         }
         return fitVals;
     }
@@ -389,16 +380,13 @@ public class Decoder implements FlagVar{
      */
     public IndexMaxVarInfo preambleDetection(float[] corr, IndexMaxVarInfo indexMaxVarInfo){
         indexMaxVarInfo.isReferenceSignalExist = false;
-        if(indexMaxVarInfo.maxVar > FlagVar.preambleDetectionThreshold) {
-            // use the ratio of peak value to the mean value of its previous 200 samples
-            int startIndex = indexMaxVarInfo.index - numberOfPreviousSamples;
-            float ratio = indexMaxVarInfo.maxVar / Algorithm.meanValue(corr, startIndex, indexMaxVarInfo.index);
-            if(ratio > ratioThreshold) {
-                indexMaxVarInfo.isReferenceSignalExist = true;
-            }
-//            System.out.println("index:"+indexMaxVarInfo.index+"   ratio:"+ratio+"   maxCorr:"+indexMaxVarInfo.maxVar);
+        int startIndex = indexMaxVarInfo.index - startBeforeMaxCorr;
+        int endIndex = indexMaxVarInfo.index - endBeforeMaxCorr;
+        float ratio = indexMaxVarInfo.fitCorrVal / Algorithm.meanValue(corr, startIndex, endIndex);
+        if(indexMaxVarInfo.fitCorrVal > FlagVar.preambleDetectionThreshold && ratio > ratioThreshold) {
+            indexMaxVarInfo.isReferenceSignalExist = true;
         }
-        System.out.println("index:"+indexMaxVarInfo.index+"   maxCorr:"+indexMaxVarInfo.maxVar);
+        System.out.println("index:"+indexMaxVarInfo.index+"   ratio:"+ratio+"   maxCorr:"+indexMaxVarInfo.fitCorrVal);
         return indexMaxVarInfo;
     }
 
@@ -431,14 +419,14 @@ public class Decoder implements FlagVar{
         if(isUpSymbol) {
             for (int i = 0; i < numberOfSymbols; i++) {
                 correlationResult = useJni?JniUtils.xcorr(fft,upSymbolFFTs[i]):xcorr(fft,upSymbolFFTs[i],true);
-                max = Algorithm.getMaxInfo(correlationResult, 0, correlationResult.length-1).maxVar;
+                max = Algorithm.getMaxInfo(correlationResult, 0, correlationResult.length-1).fitCorrVal;
                 mean = Algorithm.meanValue(correlationResult, 0, correlationResult.length-1);
                 maxRatios[i] = max / mean;
             }
         }else{
             for (int i = 0; i < numberOfSymbols; i++) {
                 correlationResult = useJni?JniUtils.xcorr(fft,downSymbolFFTs[i]):xcorr(fft,downSymbolFFTs[i],true);
-                max = Algorithm.getMaxInfo(correlationResult, 0, correlationResult.length-1).maxVar;
+                max = Algorithm.getMaxInfo(correlationResult, 0, correlationResult.length-1).fitCorrVal;
                 mean = Algorithm.meanValue(correlationResult, 0, correlationResult.length-1);
                 maxRatios[i] = max / mean;
             }
@@ -453,12 +441,12 @@ public class Decoder implements FlagVar{
         return decodeID;
     }
 
-    public boolean isSignalRepeatedDetected(IndexMaxVarInfo indexMaxVarInfo, int bufferLen){
+    public boolean isIndexAvailable(IndexMaxVarInfo indexMaxVarInfo){
         int index = indexMaxVarInfo.index;
-        if(index >= bufferLen){
-            return true;
-        }else{
+        if(index >= processBufferSize+startBeforeMaxCorr || index < startBeforeMaxCorr){
             return false;
+        }else{
+            return true;
         }
     }
 

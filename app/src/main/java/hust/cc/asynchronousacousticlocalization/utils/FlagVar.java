@@ -59,6 +59,8 @@ public interface FlagVar {
     int LPreamble = (int)(new BigDecimal(TPreamble*Fs).setScale(0, BigDecimal.ROUND_HALF_UP).floatValue());
     int LSymbol = (int)(new BigDecimal(TSymbol*Fs).setScale(0, BigDecimal.ROUND_HALF_UP).floatValue());
     int beconMessageLength = (int)(new BigDecimal(beconMessageTime*Fs).setScale(0, BigDecimal.ROUND_HALF_UP).floatValue());
+    int endBeforeMaxCorr = 100;
+    int startBeforeMaxCorr = 200;
 
     int [] sinSigF = {18000,18200,18400,18600,18800};
     int speedDetectionSigLength = 65536;
