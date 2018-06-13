@@ -59,10 +59,10 @@ public class Algorithm {
         outOfRangeDetection(s.length,low,high);
         IndexMaxVarInfo indexMaxVarInfo = new IndexMaxVarInfo();
         indexMaxVarInfo.index = low;
-        indexMaxVarInfo.maxVar = s[low];
+        indexMaxVarInfo.fitCorrVal = s[low];
         for(int i = low; i <= high; i++){
-            if(s[i] > indexMaxVarInfo.maxVar){
-                indexMaxVarInfo.maxVar = s[i];
+            if(s[i] > indexMaxVarInfo.fitCorrVal){
+                indexMaxVarInfo.fitCorrVal = s[i];
                 indexMaxVarInfo.index = i;
             }
         }
@@ -80,10 +80,10 @@ public class Algorithm {
         outOfRangeDetection(s.length,low,high);
         IndexMaxVarInfo indexMaxVarInfo = new IndexMaxVarInfo();
         indexMaxVarInfo.index = low;
-        indexMaxVarInfo.maxVar = s[low];
+        indexMaxVarInfo.fitCorrVal = s[low];
         for(int i = low; i <= high; i++){
-            if(s[i] > indexMaxVarInfo.maxVar){
-                indexMaxVarInfo.maxVar = s[i];
+            if(s[i] > indexMaxVarInfo.fitCorrVal){
+                indexMaxVarInfo.fitCorrVal = s[i];
                 indexMaxVarInfo.index = i;
             }
         }
