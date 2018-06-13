@@ -59,7 +59,7 @@ public class DecodThread extends Decoder implements Runnable{
                     synchronized (samplesList) {
                         System.arraycopy(samplesList.get(0),processBufferSize-LPreamble-startBeforeMaxCorr,bufferedSamples,0,LPreamble+startBeforeMaxCorr);
                         System.arraycopy(samplesList.get(1),0,bufferedSamples,LPreamble+startBeforeMaxCorr,processBufferSize);
-                        System.arraycopy(samplesList.get(2),0,bufferedSamples,processBufferSize+LPreamble+startBeforeMaxCorr,beconMessageLength-LPreamble);
+                        System.arraycopy(samplesList.get(2),0,bufferedSamples,processBufferSize+LPreamble+startBeforeMaxCorr,beconMessageLength);
 
                         samplesList.remove(0);
 
@@ -158,12 +158,12 @@ public class DecodThread extends Decoder implements Runnable{
 
     public void testGraph(float[] fft){
         float[] data = xcorr(fft,normalization(upPreamble),true);
-        int index1 = getFitPosFromCorr(data);
+        int index1 = getFitPos(data);
         synchronized (graphBuffer) {
             System.arraycopy(data, 0, graphBuffer, 0, graphBuffer.length);
         }
         data = xcorr(fft,normalization(downPreamble),true);
-        int index2 = getFitPosFromCorr(data);
+        int index2 = getFitPos(data);
         synchronized (graphBuffer2) {
             System.arraycopy(data, 0, graphBuffer2, 0, graphBuffer2.length);
         }

@@ -9,6 +9,8 @@ import hust.cc.asynchronousacousticlocalization.physical.SignalGenerator;
 import hust.cc.asynchronousacousticlocalization.utils.FlagVar;
 import hust.cc.asynchronousacousticlocalization.utils.JniUtils;
 
+import static android.icu.lang.UCharacter.GraphemeClusterBreak.L;
+
 public class Decoder implements FlagVar{
 
     public static short[] upPreamble = SignalGenerator.upChirpGenerator(FlagVar.Fs, FlagVar.TPreamble, FlagVar.BPreamble, FlagVar.Fmin);
@@ -53,7 +55,7 @@ public class Decoder implements FlagVar{
     public void initialize(int processBufferSize, boolean useJni){
         this.processBufferSize = processBufferSize;
         this.useJni = useJni;
-        bufferedSamples = new short[processBufferSize+beconMessageLength+startBeforeMaxCorr];
+        bufferedSamples = new short[processBufferSize+beconMessageLength+startBeforeMaxCorr+LPreamble];
         preambleCorrLen = getFFTLen(processBufferSize+LPreamble+startBeforeMaxCorr,LPreamble);
         symbolCorrLen = getFFTLen(LSymbol,LSymbol);
         preambleDetectionFFT = new FloatFFT_1D(preambleCorrLen);
@@ -110,7 +112,7 @@ public class Decoder implements FlagVar{
         return processBufferSize;
     }
 
-    public short[] bufferedSamples = new short[processBufferSize+beconMessageLength+startBeforeMaxCorr];
+    public short[] bufferedSamples = new short[processBufferSize+beconMessageLength+startBeforeMaxCorr+LPreamble];
 
 
     /**
@@ -152,9 +154,10 @@ public class Decoder implements FlagVar{
             corr = JniUtils.xcorr(data1,data2);
         }
 
-        int index = getFitPosFromCorr(corr);
+        float[] fitVals = getFitValsFromCorr(corr);
+        int index = getFitPos(fitVals);
         indexMaxVarInfo.index = index;
-        indexMaxVarInfo.fitCorrVal = corr[index];
+        indexMaxVarInfo.fitVal = fitVals[index];
 
         IndexMaxVarInfo resultInfo = preambleDetection(corr,indexMaxVarInfo);
         return resultInfo;
@@ -220,14 +223,13 @@ public class Decoder implements FlagVar{
 
     /** corr is the correlation array, chirpLength is the chirp signal's length. return the postion of the max correlation.
      * @auther Ruinan Jin
-     * @param corr
+     * @param fitVals
      * @return
      */
-    public int getFitPosFromCorr(float [] corr){
+    public int getFitPos(float [] fitVals){
         float max = 0;
         int end = 0;
         int index = 0;
-        float[] fitVals = getFitValsFromCorr(corr);
         for(int i=0;i<fitVals.length;i++){
             if(fitVals[i]>max){
                 max = fitVals[i];
@@ -246,34 +248,24 @@ public class Decoder implements FlagVar{
     }
 
     public float[] getFitValsFromCorr(float [] corr){
-        float[] fitVals = getFitVals(corr.length);
+        float[] fitVals = new float[processBufferSize+LPreamble+startBeforeMaxCorr];
         float val = 0;
         for(int i=0;i<startBeforeMaxCorr-endBeforeMaxCorr;i++){
             val += corr[i];
         }
-        for(int i=startBeforeMaxCorr;i<corr.length;i++){
+        for(int i=startBeforeMaxCorr;i<fitVals.length;i++){
             fitVals[i] = val;
             val -= corr[i-startBeforeMaxCorr];
             val += corr[i-endBeforeMaxCorr];
 
         }
-        for(int i=startBeforeMaxCorr;i<corr.length;i++){
+        for(int i=startBeforeMaxCorr;i<fitVals.length;i++){
             fitVals[i] = corr[i]*(startBeforeMaxCorr-endBeforeMaxCorr)/fitVals[i];
         }
         return fitVals;
     }
 
-    public float[] getFitVals(int len){
-        float[] fitVals;
-        if(len == preambleCorrLen) {
-            fitVals = preambleCorrFitVals;
-        }else if(len == symbolCorrLen){
-            fitVals = symbolCorrFitVals;
-        }else{
-            fitVals = new float[len];
-        }
-        return fitVals;
-    }
+
 
 
     public IndexMaxVarInfo getIndexMaxVarInfoFromFDomain(float[] sf, float[] rf){
@@ -380,13 +372,10 @@ public class Decoder implements FlagVar{
      */
     public IndexMaxVarInfo preambleDetection(float[] corr, IndexMaxVarInfo indexMaxVarInfo){
         indexMaxVarInfo.isReferenceSignalExist = false;
-        int startIndex = indexMaxVarInfo.index - startBeforeMaxCorr;
-        int endIndex = indexMaxVarInfo.index - endBeforeMaxCorr;
-        float ratio = indexMaxVarInfo.fitCorrVal / Algorithm.meanValue(corr, startIndex, endIndex);
-        if(indexMaxVarInfo.fitCorrVal > FlagVar.preambleDetectionThreshold && ratio > ratioThreshold) {
+        if(corr[indexMaxVarInfo.index] > FlagVar.preambleDetectionThreshold && indexMaxVarInfo.fitVal > ratioThreshold) {
             indexMaxVarInfo.isReferenceSignalExist = true;
         }
-        System.out.println("index:"+indexMaxVarInfo.index+"   ratio:"+ratio+"   maxCorr:"+indexMaxVarInfo.fitCorrVal);
+        System.out.println("index:"+indexMaxVarInfo.index+"   ratio:"+indexMaxVarInfo.fitVal+"   maxCorr:"+corr[indexMaxVarInfo.index]);
         return indexMaxVarInfo;
     }
 
@@ -419,14 +408,14 @@ public class Decoder implements FlagVar{
         if(isUpSymbol) {
             for (int i = 0; i < numberOfSymbols; i++) {
                 correlationResult = useJni?JniUtils.xcorr(fft,upSymbolFFTs[i]):xcorr(fft,upSymbolFFTs[i],true);
-                max = Algorithm.getMaxInfo(correlationResult, 0, correlationResult.length-1).fitCorrVal;
+                max = Algorithm.getMaxInfo(correlationResult, 0, correlationResult.length-1).fitVal;
                 mean = Algorithm.meanValue(correlationResult, 0, correlationResult.length-1);
                 maxRatios[i] = max / mean;
             }
         }else{
             for (int i = 0; i < numberOfSymbols; i++) {
                 correlationResult = useJni?JniUtils.xcorr(fft,downSymbolFFTs[i]):xcorr(fft,downSymbolFFTs[i],true);
-                max = Algorithm.getMaxInfo(correlationResult, 0, correlationResult.length-1).fitCorrVal;
+                max = Algorithm.getMaxInfo(correlationResult, 0, correlationResult.length-1).fitVal;
                 mean = Algorithm.meanValue(correlationResult, 0, correlationResult.length-1);
                 maxRatios[i] = max / mean;
             }
@@ -443,7 +432,7 @@ public class Decoder implements FlagVar{
 
     public boolean isIndexAvailable(IndexMaxVarInfo indexMaxVarInfo){
         int index = indexMaxVarInfo.index;
-        if(index >= processBufferSize+startBeforeMaxCorr || index < startBeforeMaxCorr){
+        if(index >= processBufferSize+LPreamble+startBeforeMaxCorr || index < startBeforeMaxCorr){
             return false;
         }else{
             return true;

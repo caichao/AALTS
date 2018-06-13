@@ -49,9 +49,9 @@ public interface FlagVar {
     /*****************************************************/
 
     /***********************threshold parameters*********************/
-    float preambleDetectionThreshold= 1f;
+    float preambleDetectionThreshold= 0.5f;
     int numberOfPreviousSamples = 100;
-    float ratioThreshold = 2.5f;
+    float ratioThreshold = 10f;
     /*****************************************************/
 
     //becon message
