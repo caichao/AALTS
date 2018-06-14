@@ -79,12 +79,18 @@ public class DecodThread extends Decoder implements Runnable{
 
                     // 1. the first step is to check the existence of preamble either up or down
                     mIndexMaxVarInfo.isReferenceSignalExist = false;
+                    date1 = new Date();
                     mIndexMaxVarInfo = getIndexMaxVarInfoFromFDomain(fft,upPreambleFFT);
+                    date2 = new Date();
+                    soutDateDiff("getIndexMaxVarInfoFromFDomain",date1,date2);
 
                     // 2. if the preamble exist, then decode the anchor ID
                     if (mIndexMaxVarInfo.isReferenceSignalExist && isIndexAvailable(mIndexMaxVarInfo) ) {
                         mTDOACounter++;
+                        date1 = new Date();
                         int anchorID = decodeAnchorID(bufferedSamples, true, mIndexMaxVarInfo);
+                        date2 = new Date();
+                        soutDateDiff("decodeAnchorID",date1,date2);
 //                        System.out.println("anchorID 1:"+anchorID+"   ");
                         TDOAUtils tdoaUtils = new TDOAUtils();
                         // store the timming information
@@ -100,10 +106,16 @@ public class DecodThread extends Decoder implements Runnable{
 
                     // 3. check the down preamble and do the above operation again
                     mIndexMaxVarInfo.isReferenceSignalExist = false;
+                    date1 = new Date();
                     mIndexMaxVarInfo = getIndexMaxVarInfoFromFDomain(fft,downPreambleFFT);
+                    date2 = new Date();
+                    soutDateDiff("getIndexMaxVarInfoFromFDomain",date1,date2);
                     if (mIndexMaxVarInfo.isReferenceSignalExist && isIndexAvailable(mIndexMaxVarInfo) ) {
                         mTDOACounter++;
+                        date1 = new Date();
                         int anchorID = decodeAnchorID(bufferedSamples, false, mIndexMaxVarInfo);
+                        date2 = new Date();
+                        soutDateDiff("decodeAnchorID",date1,date2);
 //                        System.out.println("anchorID 2:"+anchorID+"   ");
                         TDOAUtils tdoaUtils = new TDOAUtils();
                         tdoaUtils.loopIndex = mLoopCounter;
@@ -117,7 +129,10 @@ public class DecodThread extends Decoder implements Runnable{
                     }
 
 
+                    date1 = new Date();
 //                    processSpeedInformation();
+                    date2 = new Date();
+                    soutDateDiff("processSpeedInformation",date1,date2);
 
                     int tdoa = Integer.MIN_VALUE;
                     // 4. process the TDOA time information
@@ -229,5 +244,9 @@ public class DecodThread extends Decoder implements Runnable{
         public int timeIndex = 0;
         public int loopIndex = 0;
         public int correspondingAnchorID = 0;
+    }
+
+    public void soutDateDiff(String str, Date date1, Date date2){
+        System.out.println(str+":"+(date2.getTime()-date1.getTime()));
     }
 }

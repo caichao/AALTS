@@ -260,7 +260,7 @@ public class Decoder implements FlagVar{
 
         }
         for(int i=startBeforeMaxCorr;i<fitVals.length;i++){
-            fitVals[i] = corr[i]*(startBeforeMaxCorr-endBeforeMaxCorr)/fitVals[i];
+            fitVals[i] = corr[i]*corr[i]*(startBeforeMaxCorr-endBeforeMaxCorr)/fitVals[i];
         }
         return fitVals;
     }
