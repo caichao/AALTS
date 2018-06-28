@@ -35,6 +35,7 @@ import hust.cc.asynchronousacousticlocalization.processing.DecodThread;
 import hust.cc.asynchronousacousticlocalization.processing.DecodeScheduleMessage;
 //import hust.cc.asynchronousacousticlocalization.processing.ScheduleListener;
 import hust.cc.asynchronousacousticlocalization.processing.Decoder;
+import hust.cc.asynchronousacousticlocalization.processing.HampelFilter;
 import hust.cc.asynchronousacousticlocalization.utils.BioClient;
 import hust.cc.asynchronousacousticlocalization.utils.FileUtils;
 import hust.cc.asynchronousacousticlocalization.utils.FlagVar;
@@ -99,7 +100,8 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
         setContentView(R.layout.activity_main);
         ButterKnife.bind(this);
 //        testJni();
-        initParams();
+//        initParams();
+        testHampel();
     }
 
     private void testJni(){
@@ -170,6 +172,36 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
         }catch (Exception e){
             e.printStackTrace();
         }
+    }
+
+    private void testHampel(){
+        try {
+            HampelFilter hf = new HampelFilter(4, 5);
+            double[] data = new double[100];
+            double[] medians = new double[100];
+            double[] hampels = new double[100];
+            for (int i = 0; i < data.length; i++) {
+                data[i] = Math.random();
+                if(i%10 == 0){
+                    data[i] += 10;
+                }
+                hf.addData(data[i]);
+                if (hf.isReady()) {
+                    medians[i] = hf.getMedian();
+                    hampels[i] = hf.getHampelVal();
+                }else{
+                    medians[i] = 0;
+                    hampels[i] = 0;
+                }
+
+            }
+            System.out.println(Arrays.toString(data));
+            System.out.println(Arrays.toString(medians));
+            System.out.println(Arrays.toString(hampels));
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+
     }
 
     private void initParams(){
