@@ -62,7 +62,7 @@ public class FileUtils {
         }
     }
 
-    public static void saveList(List<Float> bytes, String name){
+    public static void saveList(List bytes, String name){
         File file = new File(SDPATH+name+".txt");
         FileWriter fw = null;
         try {
@@ -84,6 +84,8 @@ public class FileUtils {
             }
         }
     }
+
+
 
     public static float[] readTxt(String name, int length){
         String tmp = "";

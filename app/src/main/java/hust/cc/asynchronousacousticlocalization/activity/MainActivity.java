@@ -100,8 +100,8 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
         setContentView(R.layout.activity_main);
         ButterKnife.bind(this);
 //        testJni();
-//        initParams();
-        testHampel();
+        initParams();
+//        testHampel();
     }
 
     private void testJni(){
@@ -220,6 +220,8 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
                         audioRecorder.startRecord();
                     } else {
                         audioRecorder.finishRecord();
+                        FileUtils.saveBytes(decodThread.testData, "data3");
+
                     }
                 }catch (Exception e){
                     e.printStackTrace();
