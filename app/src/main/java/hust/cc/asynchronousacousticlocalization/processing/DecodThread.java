@@ -73,11 +73,11 @@ public class DecodThread extends Decoder implements Runnable{
     }
 
     private void runByStepOnLoose(){
-        if(samplesList.size() >= 3){
+        if(samplesList.size() >= 4){
             short[] buffer = new short[processBufferSize+LPreamble+startBeforeMaxCorr];
             synchronized (samplesList){
-                System.arraycopy(samplesList.get(0),0,buffer,0,processBufferSize);
-                System.arraycopy(samplesList.get(1),0,buffer,processBufferSize,LPreamble+startBeforeMaxCorr);
+                System.arraycopy(samplesList.get(1),0,buffer,0,processBufferSize);
+                System.arraycopy(samplesList.get(2),0,buffer,processBufferSize,LPreamble+startBeforeMaxCorr);
             }
             mLoopCounter++;
             float[] fft = JniUtils.fft(normalization(buffer),buffer.length+ LPreamble);
