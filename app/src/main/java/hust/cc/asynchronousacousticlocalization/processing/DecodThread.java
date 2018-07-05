@@ -25,6 +25,14 @@ public class DecodThread extends Decoder implements Runnable{
     private int mTDOACounter = 0;
     private Handler mHandler;
     public List<short[]> samplesList;
+    public short[] testData = new short[409600];
+    public List<Short> testIndex = new LinkedList<>();
+    private short testI = 0;
+    private boolean lastDetected = false;
+    private boolean upPreambleRecv = false;
+    private boolean downPreambleRecv = false;
+    IndexMaxVarInfo infoUp;
+    IndexMaxVarInfo infoDown;
 
 
     private IndexMaxVarInfo mIndexMaxVarInfo;
@@ -53,113 +61,208 @@ public class DecodThread extends Decoder implements Runnable{
     public void run() {
         try {
             while (isThreadRunning) {
-                if (samplesList.size() >= 3) {
-                    Date date1,dateS = new Date();
-                    Date date2;
-                    synchronized (samplesList) {
-                        System.arraycopy(samplesList.get(0),processBufferSize-LPreamble-startBeforeMaxCorr,bufferedSamples,0,LPreamble+startBeforeMaxCorr);
-                        System.arraycopy(samplesList.get(1),0,bufferedSamples,LPreamble+startBeforeMaxCorr,processBufferSize);
-                        System.arraycopy(samplesList.get(2),0,bufferedSamples,processBufferSize+LPreamble+startBeforeMaxCorr,beconMessageLength);
 
-                        samplesList.remove(0);
-
-                    }
-                    mLoopCounter++;
-                    //compute the fft of the bufferedSamples, it will be used twice. It's computed here to reduce time cost.
-                    float[] fft;
-                    if(!useJni) {
-                        fft = getData1HalfFFtFromSignals(bufferedSamples, 0, processBufferSize+LPreamble+startBeforeMaxCorr- 1, upPreamble.length);
-                    }else {
-                        float[] samplesF = normalization(bufferedSamples,0,processBufferSize+LPreamble+startBeforeMaxCorr-1);
-                        fft = JniUtils.fft(samplesF,samplesF.length+ LPreamble);
-                    }
-
-                    //open this to see corr in graphs
-//                    testGraph(fft);
-
-                    // 1. the first step is to check the existence of preamble either up or down
-                    mIndexMaxVarInfo.isReferenceSignalExist = false;
-                    date1 = new Date();
-                    mIndexMaxVarInfo = getIndexMaxVarInfoFromFDomain(fft,upPreambleFFT);
-                    date2 = new Date();
-                    soutDateDiff("getIndexMaxVarInfoFromFDomain",date1,date2);
-
-                    // 2. if the preamble exist, then decode the anchor ID
-                    if (mIndexMaxVarInfo.isReferenceSignalExist && isIndexAvailable(mIndexMaxVarInfo) ) {
-                        mTDOACounter++;
-                        date1 = new Date();
-                        int anchorID = decodeAnchorID(bufferedSamples, true, mIndexMaxVarInfo);
-                        date2 = new Date();
-                        soutDateDiff("decodeAnchorID",date1,date2);
-//                        System.out.println("anchorID 1:"+anchorID+"   ");
-                        TDOAUtils tdoaUtils = new TDOAUtils();
-                        // store the timming information
-                        tdoaUtils.loopIndex = mLoopCounter;
-                        tdoaUtils.preambleType = FlagVar.UP_PREAMBLE;
-                        tdoaUtils.timeIndex = mIndexMaxVarInfo.index;
-                        tdoaUtils.TDOACounter = mTDOACounter;
-                        tdoaUtils.correspondingAnchorID = anchorID;
-
-                        preambleInfoList.add(tdoaUtils);
-
-                    }
-
-                    // 3. check the down preamble and do the above operation again
-                    mIndexMaxVarInfo.isReferenceSignalExist = false;
-                    date1 = new Date();
-                    mIndexMaxVarInfo = getIndexMaxVarInfoFromFDomain(fft,downPreambleFFT);
-                    date2 = new Date();
-                    soutDateDiff("getIndexMaxVarInfoFromFDomain",date1,date2);
-                    if (mIndexMaxVarInfo.isReferenceSignalExist && isIndexAvailable(mIndexMaxVarInfo) ) {
-                        mTDOACounter++;
-                        date1 = new Date();
-                        int anchorID = decodeAnchorID(bufferedSamples, false, mIndexMaxVarInfo);
-                        date2 = new Date();
-                        soutDateDiff("decodeAnchorID",date1,date2);
-//                        System.out.println("anchorID 2:"+anchorID+"   ");
-                        TDOAUtils tdoaUtils = new TDOAUtils();
-                        tdoaUtils.loopIndex = mLoopCounter;
-                        tdoaUtils.preambleType = FlagVar.DOWN_PREAMBLE;
-                        tdoaUtils.timeIndex = mIndexMaxVarInfo.index;
-                        tdoaUtils.TDOACounter = mTDOACounter;
-                        tdoaUtils.correspondingAnchorID = anchorID;
-
-                        preambleInfoList.add(tdoaUtils);
-
-                    }
-
-
-                    date1 = new Date();
-//                    processSpeedInformation();
-                    date2 = new Date();
-                    soutDateDiff("processSpeedInformation",date1,date2);
-
-                    int tdoa = Integer.MIN_VALUE;
-                    // 4. process the TDOA time information
-                    if (mTDOACounter >= 2) {// receive two TDOA timming information
-                        if (mTDOACounter == 3) {
-                            preambleInfoList.pollFirst();
-                        }
-                        tdoa = processTDOAInformation();
-                    }
-
-                    System.out.println("size:"+samplesList.size()+"    mLoopCounter:"+mLoopCounter+"    tdoa:"+tdoa);
-                    if(mLoopCounter > 100000){
-                        return;
-                    }
-                    if((Math.abs(tdoa)>30 && Math.abs(tdoa) < 200000)) {
-                        Log.v("","tdoa:"+tdoa);
-                    }
-                    Date dateE = new Date();
-                    System.out.println("total time:"+(dateE.getTime()-dateS.getTime()));
-                }
-
+//                runByStepOnTight();
+                runByStepOnLoose();
 
             }
         }catch (Exception e){
             e.printStackTrace();
         }
 
+    }
+
+    private void runByStepOnLoose(){
+        if(samplesList.size() >= 4){
+            short[] buffer = new short[processBufferSize+LPreamble+startBeforeMaxCorr];
+            synchronized (samplesList){
+                System.arraycopy(samplesList.get(1),0,buffer,0,processBufferSize);
+                System.arraycopy(samplesList.get(2),0,buffer,processBufferSize,LPreamble+startBeforeMaxCorr);
+            }
+            mLoopCounter++;
+            float[] fft = JniUtils.fft(normalization(buffer),buffer.length+ LPreamble);
+
+            infoUp = getIndexMaxVarInfoFromFDomain(fft,upPreambleFFT);
+            infoDown = getIndexMaxVarInfoFromFDomain(fft,downPreambleFFT);
+
+            if(infoUp.isReferenceSignalExist){
+                if(!upPreambleRecv) {
+                    mTDOACounter++;
+                    synchronized (samplesList) {
+                        System.arraycopy(samplesList.get(0), 0, bufferUp, 0, processBufferSize);
+                        System.arraycopy(samplesList.get(1), 0, bufferUp, processBufferSize, processBufferSize);
+                        System.arraycopy(samplesList.get(2), 0, bufferUp, processBufferSize * 2, processBufferSize);
+                    }
+                    ;
+                    int anchorID = decodeAnchorID(bufferUp, true, infoUp);
+                    TDOAUtils tdoaUtils = new TDOAUtils();
+                    // store the timming information
+                    tdoaUtils.loopIndex = mLoopCounter;
+                    tdoaUtils.preambleType = FlagVar.UP_PREAMBLE;
+                    tdoaUtils.timeIndex = infoUp.index;
+                    tdoaUtils.TDOACounter = mTDOACounter;
+                    tdoaUtils.correspondingAnchorID = anchorID;
+                    preambleInfoList.add(tdoaUtils);
+                    if(testI<33) {
+                        System.arraycopy(bufferUp, 0, testData, processBufferSize * testI * 3, processBufferSize*3);
+                    }
+                    testI++;
+                }
+                upPreambleRecv = true;
+            }else{
+                upPreambleRecv = false;
+            }
+
+            if(infoDown.isReferenceSignalExist){
+                if(!downPreambleRecv) {
+                    mTDOACounter++;
+                    synchronized (samplesList) {
+                        System.arraycopy(samplesList.get(0), 0, bufferDown, 0, processBufferSize);
+                        System.arraycopy(samplesList.get(1), 0, bufferDown, processBufferSize, processBufferSize);
+                        System.arraycopy(samplesList.get(2), 0, bufferDown, processBufferSize * 2, processBufferSize);
+                    }
+                    int anchorID = decodeAnchorID(bufferDown, false, infoDown);
+                    TDOAUtils tdoaUtils = new TDOAUtils();
+                    // store the timming information
+                    tdoaUtils.loopIndex = mLoopCounter;
+                    tdoaUtils.preambleType = FlagVar.DOWN_PREAMBLE;
+                    tdoaUtils.timeIndex = infoDown.index;
+                    tdoaUtils.TDOACounter = mTDOACounter;
+                    tdoaUtils.correspondingAnchorID = anchorID;
+                    preambleInfoList.add(tdoaUtils);
+                }
+                downPreambleRecv = true;
+            }else{
+                downPreambleRecv = false;
+            }
+
+            synchronized (samplesList){
+                samplesList.remove(0);
+            }
+
+            int tdoa = Integer.MIN_VALUE;
+            // 4. process the TDOA time information
+            if (mTDOACounter >= 2) {// receive two TDOA timming information
+                if (mTDOACounter == 3) {
+                    preambleInfoList.pollFirst();
+                }
+                tdoa = processTDOAInformation();
+            }
+            System.out.println("size:"+samplesList.size()+"    mLoopCounter:"+mLoopCounter+"    tdoa:"+tdoa);
+        }
+    }
+
+    private void runByStepOnTight(){
+        if (samplesList.size() >= 3) {
+            Date date1,dateS = new Date();
+            Date date2;
+            synchronized (samplesList) {
+                System.arraycopy(samplesList.get(0),processBufferSize-LPreamble-startBeforeMaxCorr,bufferedSamples,0,LPreamble+startBeforeMaxCorr);
+                System.arraycopy(samplesList.get(1),0,bufferedSamples,LPreamble+startBeforeMaxCorr,processBufferSize);
+                System.arraycopy(samplesList.get(2),0,bufferedSamples,processBufferSize+LPreamble+startBeforeMaxCorr,beconMessageLength);
+            }
+            mLoopCounter++;
+            //compute the fft of the bufferedSamples, it will be used twice. It's computed here to reduce time cost.
+            float[] fft;
+            if(!useJni) {
+                fft = getData1HalfFFtFromSignals(bufferedSamples, 0, processBufferSize+LPreamble+startBeforeMaxCorr- 1, upPreamble.length);
+            }else {
+                float[] samplesF = normalization(bufferedSamples,0,processBufferSize+LPreamble+startBeforeMaxCorr-1);
+                fft = JniUtils.fft(samplesF,samplesF.length+ LPreamble);
+            }
+
+            //open this to see corr in graphs
+//                    testGraph(fft);
+
+            // 1. the first step is to check the existence of preamble either up or down
+            mIndexMaxVarInfo.isReferenceSignalExist = false;
+            date1 = new Date();
+            mIndexMaxVarInfo = getIndexMaxVarInfoFromFDomain(fft,upPreambleFFT);
+            date2 = new Date();
+//            soutDateDiff("getIndexMaxVarInfoFromFDomain",date1,date2);
+
+
+            // 2. if the preamble exist, then decode the anchor ID
+            if (mIndexMaxVarInfo.isReferenceSignalExist && isIndexAvailable(mIndexMaxVarInfo) ) {
+                mTDOACounter++;
+                date1 = new Date();
+                int anchorID = decodeAnchorID(bufferedSamples, true, mIndexMaxVarInfo);
+                date2 = new Date();
+//                soutDateDiff("decodeAnchorID",date1,date2);
+//                System.out.println("anchorID 1:"+anchorID+"   ");
+                TDOAUtils tdoaUtils = new TDOAUtils();
+                // store the timming information
+                tdoaUtils.loopIndex = mLoopCounter;
+                tdoaUtils.preambleType = FlagVar.UP_PREAMBLE;
+                tdoaUtils.timeIndex = mIndexMaxVarInfo.index;
+                tdoaUtils.TDOACounter = mTDOACounter;
+                tdoaUtils.correspondingAnchorID = anchorID;
+                preambleInfoList.add(tdoaUtils);
+
+                if(testI<100) {
+                    System.arraycopy(samplesList.get(0), 0, testData, 4096 * testI, 4096);
+                    if(!lastDetected){
+                        testIndex.add(testI);
+//                        System.out.println("testI:"+testI);
+                    }
+                }
+
+                lastDetected = true;
+                testI++;
+
+            }else{
+                lastDetected = false;
+            }
+
+            // 3. check the down preamble and do the above operation again
+            mIndexMaxVarInfo.isReferenceSignalExist = false;
+            date1 = new Date();
+            mIndexMaxVarInfo = getIndexMaxVarInfoFromFDomain(fft,downPreambleFFT);
+            date2 = new Date();
+//            soutDateDiff("getIndexMaxVarInfoFromFDomain",date1,date2);
+            if (mIndexMaxVarInfo.isReferenceSignalExist && isIndexAvailable(mIndexMaxVarInfo) ) {
+                mTDOACounter++;
+                date1 = new Date();
+                int anchorID = decodeAnchorID(bufferedSamples, false, mIndexMaxVarInfo);
+                date2 = new Date();
+//                soutDateDiff("decodeAnchorID",date1,date2);
+//                System.out.println("anchorID 2:"+anchorID+"   ");
+                TDOAUtils tdoaUtils = new TDOAUtils();
+                tdoaUtils.loopIndex = mLoopCounter;
+                tdoaUtils.preambleType = FlagVar.DOWN_PREAMBLE;
+                tdoaUtils.timeIndex = mIndexMaxVarInfo.index;
+                tdoaUtils.TDOACounter = mTDOACounter;
+                tdoaUtils.correspondingAnchorID = anchorID;
+
+                preambleInfoList.add(tdoaUtils);
+
+            }
+
+            synchronized (samplesList){
+                samplesList.remove(0);
+            }
+
+            date1 = new Date();
+            processSpeedInformation();
+            date2 = new Date();
+//            soutDateDiff("processSpeedInformation",date1,date2);
+
+            int tdoa = Integer.MIN_VALUE;
+            // 4. process the TDOA time information
+            if (mTDOACounter >= 2) {// receive two TDOA timming information
+                if (mTDOACounter == 3) {
+                    preambleInfoList.pollFirst();
+                }
+                tdoa = processTDOAInformation();
+            }
+
+            System.out.println("size:"+samplesList.size()+"    mLoopCounter:"+mLoopCounter+"    tdoa:"+tdoa);
+            if(mLoopCounter > 100000){
+                return;
+            }
+            Date dateE = new Date();
+//            System.out.println("total time:"+(dateE.getTime()-dateS.getTime()));
+        }
     }
 
     public void processSpeedInformation(){

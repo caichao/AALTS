@@ -52,10 +52,15 @@ public class Decoder implements FlagVar{
     public float[] preambleCorrFitVals;
     public float[] symbolCorrFitVals;
 
+    protected short[] bufferUp;
+    protected short[] bufferDown;
+
     public void initialize(int processBufferSize, boolean useJni){
         this.processBufferSize = processBufferSize;
         this.useJni = useJni;
         bufferedSamples = new short[processBufferSize+beconMessageLength+startBeforeMaxCorr+LPreamble];
+        bufferUp = new short[processBufferSize*3];
+        bufferDown = new short[processBufferSize*3];
         preambleCorrLen = getFFTLen(processBufferSize+LPreamble+startBeforeMaxCorr,LPreamble);
         symbolCorrLen = getFFTLen(LSymbol,LSymbol);
         preambleDetectionFFT = new FloatFFT_1D(preambleCorrLen);
@@ -153,6 +158,7 @@ public class Decoder implements FlagVar{
         }else{
             corr = JniUtils.xcorr(data1,data2);
         }
+
 
         float[] fitVals = getFitValsFromCorr(corr);
         int index = getFitPos(fitVals);
@@ -260,7 +266,7 @@ public class Decoder implements FlagVar{
 
         }
         for(int i=startBeforeMaxCorr;i<fitVals.length;i++){
-            fitVals[i] = corr[i]*corr[i]*(startBeforeMaxCorr-endBeforeMaxCorr)/fitVals[i];
+            fitVals[i] = corr[i]*(startBeforeMaxCorr-endBeforeMaxCorr)/fitVals[i];
         }
         return fitVals;
     }
@@ -372,10 +378,12 @@ public class Decoder implements FlagVar{
      */
     public IndexMaxVarInfo preambleDetection(float[] corr, IndexMaxVarInfo indexMaxVarInfo){
         indexMaxVarInfo.isReferenceSignalExist = false;
-        if(corr[indexMaxVarInfo.index] > FlagVar.preambleDetectionThreshold && indexMaxVarInfo.fitVal > ratioThreshold) {
+        float ratio = indexMaxVarInfo.fitVal*corr[indexMaxVarInfo.index];
+        if(corr[indexMaxVarInfo.index] > FlagVar.preambleDetectionThreshold && ratio > ratioThreshold) {
             indexMaxVarInfo.isReferenceSignalExist = true;
+            System.out.println("======================================================");
         }
-        System.out.println("index:"+indexMaxVarInfo.index+"   ratio:"+indexMaxVarInfo.fitVal+"   maxCorr:"+corr[indexMaxVarInfo.index]);
+        System.out.println("index:"+indexMaxVarInfo.index+"   ratio:"+ratio+"   maxCorr:"+corr[indexMaxVarInfo.index]);
         return indexMaxVarInfo;
     }
 
