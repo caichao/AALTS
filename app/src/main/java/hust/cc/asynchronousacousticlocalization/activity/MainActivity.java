@@ -220,7 +220,15 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
                         audioRecorder.startRecord();
                     } else {
                         audioRecorder.finishRecord();
-                        FileUtils.saveBytes(decodThread.testData, "data3");
+                        System.out.println("write start");
+                        FileUtils.saveBytes(decodThread.testData, "testData");
+                        System.out.println("write start2");
+                        FileUtils.saveBytes(decodThread.testFFT, "testFFT");
+                        System.out.println("write start3");
+                        FileUtils.saveBytes(decodThread.testCorr, "testCorr");
+                        System.out.println("write start4");
+                        FileUtils.saveBytes(decodThread.testFitVals, "testFitVals");
+                        System.out.println("write end");
 
                     }
                 }catch (Exception e){

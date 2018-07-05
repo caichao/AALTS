@@ -25,9 +25,14 @@ public class DecodThread extends Decoder implements Runnable{
     private int mTDOACounter = 0;
     private Handler mHandler;
     public List<short[]> samplesList;
-    public short[] testData = new short[409600];
+
+    public short[] testData = new short[4096*3*33];
     public List<Short> testIndex = new LinkedList<>();
     private short testI = 0;
+    public float[] testFFT = new float[8192*2*33];
+    public float[] testCorr = new float[8192*33];
+    public float[] testFitVals = new float[6216*33];
+
     private boolean lastDetected = false;
     private boolean upPreambleRecv = false;
     private boolean downPreambleRecv = false;
@@ -104,6 +109,14 @@ public class DecodThread extends Decoder implements Runnable{
                     tdoaUtils.correspondingAnchorID = anchorID;
                     preambleInfoList.add(tdoaUtils);
                     if(testI<33) {
+                        short[] buffer2 = new short[processBufferSize+LPreamble+startBeforeMaxCorr];
+                        System.arraycopy(bufferUp,0,buffer2,0,buffer2.length);
+                        float[] fft2 = JniUtils.fft(normalization(buffer2),buffer2.length+LPreamble);
+                        System.arraycopy(fft2,0,testFFT,fft2.length*testI,fft2.length);
+                        float[] corr2 = JniUtils.xcorr(fft2,upPreambleFFT);
+                        System.arraycopy(corr2,0,testCorr,corr2.length*testI,corr2.length);
+                        float[] fitVals2 = getFitValsFromCorr(corr2);
+                        System.arraycopy(fitVals2,0,testFitVals,fitVals2.length*testI,fitVals2.length);
                         System.arraycopy(bufferUp, 0, testData, processBufferSize * testI * 3, processBufferSize*3);
                     }
                     testI++;
