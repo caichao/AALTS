@@ -161,7 +161,7 @@ public class Decoder implements FlagVar{
 
 
         float[] fitVals = getFitValsFromCorr(corr);
-        int index = getFitPos(fitVals);
+        int index = getFitPos(fitVals, corr);
         indexMaxVarInfo.index = index;
         indexMaxVarInfo.fitVal = fitVals[index];
 
@@ -232,25 +232,22 @@ public class Decoder implements FlagVar{
      * @param fitVals
      * @return
      */
-    public int getFitPos(float [] fitVals){
+    public int getFitPos(float [] fitVals, float[] corr){
         float max = 0;
-        int end = 0;
+        float maxCorr = 0;
         int index = 0;
         for(int i=0;i<fitVals.length;i++){
-            if(fitVals[i]>max){
+            maxCorr = maxCorr<corr[i]?corr[i]:maxCorr;
+        }
+        float threshold = ratioAvailableThreshold*maxCorr;
+        for(int i=0;i<fitVals.length;i++){
+            if(fitVals[i]>max && corr[i]>threshold){
                 max = fitVals[i];
-                end = i;
                 index = i;
             }
         }
-        int start = end-400>0?end-400:0;
-        for(int i=start;i<=end;i++){
-            if(fitVals[i] >= 0.6*max){
-                index = i;
-                break;
-            }
-        }
-        return end;
+
+        return index;
     }
 
     public float[] getFitValsFromCorr(float [] corr){

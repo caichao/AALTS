@@ -78,11 +78,11 @@ public class DecodThread extends Decoder implements Runnable{
     }
 
     private void runByStepOnLoose(){
-        if(samplesList.size() >= 4){
+        if(samplesList.size() >= 3){
             short[] buffer = new short[processBufferSize+LPreamble+startBeforeMaxCorr];
             synchronized (samplesList){
-                System.arraycopy(samplesList.get(1),0,buffer,0,processBufferSize);
-                System.arraycopy(samplesList.get(2),0,buffer,processBufferSize,LPreamble+startBeforeMaxCorr);
+                System.arraycopy(samplesList.get(0),0,buffer,0,processBufferSize);
+                System.arraycopy(samplesList.get(1),0,buffer,processBufferSize,LPreamble+startBeforeMaxCorr);
             }
             mLoopCounter++;
             float[] fft = JniUtils.fft(normalization(buffer),buffer.length+ LPreamble);
@@ -108,18 +108,18 @@ public class DecodThread extends Decoder implements Runnable{
                     tdoaUtils.TDOACounter = mTDOACounter;
                     tdoaUtils.correspondingAnchorID = anchorID;
                     preambleInfoList.add(tdoaUtils);
-                    if(testI<33) {
-                        short[] buffer2 = new short[processBufferSize+LPreamble+startBeforeMaxCorr];
-                        System.arraycopy(bufferUp,0,buffer2,0,buffer2.length);
-                        float[] fft2 = JniUtils.fft(normalization(buffer2),buffer2.length+LPreamble);
-                        System.arraycopy(fft2,0,testFFT,fft2.length*testI,fft2.length);
-                        float[] corr2 = JniUtils.xcorr(fft2,upPreambleFFT);
-                        System.arraycopy(corr2,0,testCorr,corr2.length*testI,corr2.length);
-                        float[] fitVals2 = getFitValsFromCorr(corr2);
-                        System.arraycopy(fitVals2,0,testFitVals,fitVals2.length*testI,fitVals2.length);
-                        System.arraycopy(bufferUp, 0, testData, processBufferSize * testI * 3, processBufferSize*3);
-                    }
-                    testI++;
+//                    if(testI<33) {
+//                        short[] buffer2 = new short[processBufferSize+LPreamble+startBeforeMaxCorr];
+//                        System.arraycopy(bufferUp,0,buffer2,0,buffer2.length);
+//                        float[] fft2 = JniUtils.fft(normalization(buffer2),buffer2.length+LPreamble);
+//                        System.arraycopy(fft2,0,testFFT,fft2.length*testI,fft2.length);
+//                        float[] corr2 = JniUtils.xcorr(fft2,upPreambleFFT);
+//                        System.arraycopy(corr2,0,testCorr,corr2.length*testI,corr2.length);
+//                        float[] fitVals2 = getFitValsFromCorr(corr2);
+//                        System.arraycopy(fitVals2,0,testFitVals,fitVals2.length*testI,fitVals2.length);
+//                        System.arraycopy(bufferUp, 0, testData, processBufferSize * testI * 3, processBufferSize*3);
+//                    }
+//                    testI++;
                 }
                 upPreambleRecv = true;
             }else{
@@ -289,21 +289,21 @@ public class DecodThread extends Decoder implements Runnable{
 
     public void testGraph(float[] fft){
         float[] data = xcorr(fft,normalization(upPreamble),true);
-        int index1 = getFitPos(data);
+//        int index1 = getFitPos(data);
         synchronized (graphBuffer) {
             System.arraycopy(data, 0, graphBuffer, 0, graphBuffer.length);
         }
         data = xcorr(fft,normalization(downPreamble),true);
-        int index2 = getFitPos(data);
+//        int index2 = getFitPos(data);
         synchronized (graphBuffer2) {
             System.arraycopy(data, 0, graphBuffer2, 0, graphBuffer2.length);
         }
 
-        int tdoaTest = index2-index1;
-        System.out.println("tdoa:"+tdoaTest);
-        if(Math.abs(tdoaTest) > 30){
-            System.out.println("out of range");
-        }
+//        int tdoaTest = index2-index1;
+//        System.out.println("tdoa:"+tdoaTest);
+//        if(Math.abs(tdoaTest) > 30){
+//            System.out.println("out of range");
+//        }
 
         Message msg = new Message();
         msg.what = MESSAGE_GRAPH;
