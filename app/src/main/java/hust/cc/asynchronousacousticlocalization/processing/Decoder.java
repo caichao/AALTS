@@ -384,6 +384,39 @@ public class Decoder implements FlagVar{
         return indexMaxVarInfo;
     }
 
+
+    public int[] decodeAnchorSeqId(short[] s ,IndexMaxVarInfo info){
+        int[] ids = new int[2];
+        int startIndex = info.index+LPreamble+guardIntervalLength;
+        int endIndex = startIndex+LSymbol-1;
+        float[] anchorSamples = normalization(s,startIndex,endIndex);
+        ids[0] = decodeId(anchorSamples);
+        startIndex = startIndex+LSymbol+guardIntervalLength;
+        endIndex = endIndex+LSymbol+guardIntervalLength;
+        float[] seqSamples = normalization(s,startIndex,endIndex);
+        ids[1] = decodeId(seqSamples);
+        return ids;
+    }
+
+
+
+    public int decodeId(float[] s){
+        float[] fft = JniUtils.fft(s,2*LSymbol);
+        float[] corr = null;
+        float[] maxRatios = new float[numberOfSymbols];
+
+        for(int i=0;i<numberOfSymbols;i++){
+            corr = JniUtils.xcorr(fft,downSymbolFFTs[i]);
+            float max = Algorithm.getMaxInfo(corr, 0, corr.length-1).fitVal;
+            float mean = Algorithm.meanValue(corr, 0, corr.length-1);
+            maxRatios[i] = max/mean;
+        }
+
+        int id = Algorithm.getMaxInfo(maxRatios,0,maxRatios.length-1).index;
+        return id;
+
+    }
+
     /**
      * decode the anchor ID
      * @param s - the audio samples
@@ -391,7 +424,7 @@ public class Decoder implements FlagVar{
      * @param isUpSymbol - indicate whether we use up or down symbol to decode the anchor ID
      * @return the decoded anchor ID
      */
-    public int decodeAnchorID(short[] s, boolean isUpSymbol, IndexMaxVarInfo p){
+    public int decodeAnchorIDOnOrthotropic(short[] s, boolean isUpSymbol, IndexMaxVarInfo p){
         int startIndex = p.index + FlagVar.LPreamble + FlagVar.guardIntervalLength;
         int endIndex = startIndex + FlagVar.LSymbol - 1;
 
@@ -430,6 +463,7 @@ public class Decoder implements FlagVar{
         max = maxRatios[0];
         for (int i = 1 ; i < numberOfSymbols ; i++){
             if(maxRatios[i] > max)
+                max = maxRatios[i];
                 decodeID = i;
         }
         return decodeID;

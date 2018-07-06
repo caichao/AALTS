@@ -2,7 +2,6 @@ package hust.cc.asynchronousacousticlocalization.processing;
 
 import android.os.Handler;
 import android.os.Message;
-import android.util.Log;
 
 import java.util.ArrayDeque;
 import java.util.Date;
@@ -68,7 +67,7 @@ public class DecodThread extends Decoder implements Runnable{
             while (isThreadRunning) {
 
 //                runByStepOnTight();
-                runByStepOnLoose();
+                runByStepOnLooseOrthotropic();
 
             }
         }catch (Exception e){
@@ -78,6 +77,58 @@ public class DecodThread extends Decoder implements Runnable{
     }
 
     private void runByStepOnLoose(){
+        if(samplesList.size() >= 3){
+            short[] buffer = new short[processBufferSize+LPreamble+startBeforeMaxCorr];
+            synchronized (samplesList){
+                System.arraycopy(samplesList.get(0),0,buffer,0,processBufferSize);
+                System.arraycopy(samplesList.get(1),0,buffer,processBufferSize,LPreamble+startBeforeMaxCorr);
+            }
+            mLoopCounter++;
+            float[] fft = JniUtils.fft(normalization(buffer),buffer.length+ LPreamble);
+
+            infoUp = getIndexMaxVarInfoFromFDomain(fft,upPreambleFFT);
+
+            if(infoUp.isReferenceSignalExist){
+                if(!upPreambleRecv) {
+                    mTDOACounter++;
+                    synchronized (samplesList) {
+                        System.arraycopy(samplesList.get(0), 0, bufferUp, 0, processBufferSize);
+                        System.arraycopy(samplesList.get(1), 0, bufferUp, processBufferSize, processBufferSize);
+                        System.arraycopy(samplesList.get(2), 0, bufferUp, processBufferSize * 2, processBufferSize);
+                    }
+
+                    int[] ids = decodeAnchorSeqId(bufferUp, infoUp);
+                    processSpeedInformation(buffer);
+
+
+
+//                    if(testI<33) {
+//                        short[] buffer2 = new short[processBufferSize+LPreamble+startBeforeMaxCorr];
+//                        System.arraycopy(bufferUp,0,buffer2,0,buffer2.length);
+//                        float[] fft2 = JniUtils.fft(normalization(buffer2),buffer2.length+LPreamble);
+//                        System.arraycopy(fft2,0,testFFT,fft2.length*testI,fft2.length);
+//                        float[] corr2 = JniUtils.xcorr(fft2,upPreambleFFT);
+//                        System.arraycopy(corr2,0,testCorr,corr2.length*testI,corr2.length);
+//                        float[] fitVals2 = getFitValsFromCorr(corr2);
+//                        System.arraycopy(fitVals2,0,testFitVals,fitVals2.length*testI,fitVals2.length);
+//                        System.arraycopy(bufferUp, 0, testData, processBufferSize * testI * 3, processBufferSize*3);
+//                    }
+//                    testI++;
+                }
+                upPreambleRecv = true;
+            }else{
+                upPreambleRecv = false;
+            }
+
+            synchronized (samplesList){
+                samplesList.remove(0);
+            }
+
+//            System.out.println("size:"+samplesList.size()+"    mLoopCounter:"+mLoopCounter+"    tdoa:"+tdoa);
+        }
+    }
+
+    private void runByStepOnLooseOrthotropic(){
         if(samplesList.size() >= 3){
             short[] buffer = new short[processBufferSize+LPreamble+startBeforeMaxCorr];
             synchronized (samplesList){
@@ -99,7 +150,7 @@ public class DecodThread extends Decoder implements Runnable{
                         System.arraycopy(samplesList.get(2), 0, bufferUp, processBufferSize * 2, processBufferSize);
                     }
                     ;
-                    int anchorID = decodeAnchorID(bufferUp, true, infoUp);
+                    int anchorID = decodeAnchorIDOnOrthotropic(bufferUp, true, infoUp);
                     TDOAUtils tdoaUtils = new TDOAUtils();
                     // store the timming information
                     tdoaUtils.loopIndex = mLoopCounter;
@@ -134,7 +185,7 @@ public class DecodThread extends Decoder implements Runnable{
                         System.arraycopy(samplesList.get(1), 0, bufferDown, processBufferSize, processBufferSize);
                         System.arraycopy(samplesList.get(2), 0, bufferDown, processBufferSize * 2, processBufferSize);
                     }
-                    int anchorID = decodeAnchorID(bufferDown, false, infoDown);
+                    int anchorID = decodeAnchorIDOnOrthotropic(bufferDown, false, infoDown);
                     TDOAUtils tdoaUtils = new TDOAUtils();
                     // store the timming information
                     tdoaUtils.loopIndex = mLoopCounter;
@@ -165,7 +216,7 @@ public class DecodThread extends Decoder implements Runnable{
         }
     }
 
-    private void runByStepOnTight(){
+    private void runByStepOnTightOrthotropic(){
         if (samplesList.size() >= 3) {
             Date date1,dateS = new Date();
             Date date2;
@@ -199,7 +250,7 @@ public class DecodThread extends Decoder implements Runnable{
             if (mIndexMaxVarInfo.isReferenceSignalExist && isIndexAvailable(mIndexMaxVarInfo) ) {
                 mTDOACounter++;
                 date1 = new Date();
-                int anchorID = decodeAnchorID(bufferedSamples, true, mIndexMaxVarInfo);
+                int anchorID = decodeAnchorIDOnOrthotropic(bufferedSamples, true, mIndexMaxVarInfo);
                 date2 = new Date();
 //                soutDateDiff("decodeAnchorID",date1,date2);
 //                System.out.println("anchorID 1:"+anchorID+"   ");
@@ -236,7 +287,7 @@ public class DecodThread extends Decoder implements Runnable{
             if (mIndexMaxVarInfo.isReferenceSignalExist && isIndexAvailable(mIndexMaxVarInfo) ) {
                 mTDOACounter++;
                 date1 = new Date();
-                int anchorID = decodeAnchorID(bufferedSamples, false, mIndexMaxVarInfo);
+                int anchorID = decodeAnchorIDOnOrthotropic(bufferedSamples, false, mIndexMaxVarInfo);
                 date2 = new Date();
 //                soutDateDiff("decodeAnchorID",date1,date2);
 //                System.out.println("anchorID 2:"+anchorID+"   ");
@@ -256,7 +307,7 @@ public class DecodThread extends Decoder implements Runnable{
             }
 
             date1 = new Date();
-            processSpeedInformation();
+            processSpeedInformation(bufferedSamples);
             date2 = new Date();
 //            soutDateDiff("processSpeedInformation",date1,date2);
 
@@ -278,8 +329,8 @@ public class DecodThread extends Decoder implements Runnable{
         }
     }
 
-    public void processSpeedInformation(){
-        float fshift = getFshift(normalization(bufferedSamples),sinSigF,speedDetectionSigLength,speedDetectionRangeF,Fs);
+    public void processSpeedInformation(short[] buffer){
+        float fshift = getFshift(normalization(buffer),sinSigF,speedDetectionSigLength,speedDetectionRangeF,Fs);
         float speed = (int)(fshift*soundSpeed/Fs);
         Message msg = new Message();
         msg.what = MESSAGE_SPEED;
