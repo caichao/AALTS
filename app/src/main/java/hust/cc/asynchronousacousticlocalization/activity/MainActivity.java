@@ -220,15 +220,19 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
                         audioRecorder.startRecord();
                     } else {
                         audioRecorder.finishRecord();
-//                        System.out.println("write start");
-//                        FileUtils.saveBytes(decodThread.testData, "testData");
+                        System.out.println("write start");
+                        FileUtils.saveBytes(decodThread.testData, "testData");
+                        FileUtils.saveBytes(DecodThread.downSymbolSamples[0],"down0");
+                        FileUtils.saveBytes(DecodThread.downSymbolSamples[1],"down1");
+                        FileUtils.saveBytes(DecodThread.downSymbolSamples[2],"down2");
+                        FileUtils.saveBytes(DecodThread.downSymbolSamples[3],"down3");
 //                        System.out.println("write start2");
 //                        FileUtils.saveBytes(decodThread.testFFT, "testFFT");
 //                        System.out.println("write start3");
 //                        FileUtils.saveBytes(decodThread.testCorr, "testCorr");
 //                        System.out.println("write start4");
 //                        FileUtils.saveBytes(decodThread.testFitVals, "testFitVals");
-//                        System.out.println("write end");
+                        System.out.println("write end");
 
                     }
                 }catch (Exception e){
@@ -442,6 +446,10 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
                     StringBuilder sb = new StringBuilder();
                     sb.append("speed:").append(msg.arg1);
                     text2.setText(sb.toString());
+                    break;
+                }
+                case FlagVar.MESSAGE_JSON:{
+                    text.setText((String)(msg.obj));
                     break;
                 }
             }
