@@ -9,7 +9,9 @@ import java.util.Deque;
 import java.util.LinkedList;
 import java.util.List;
 
+import hust.cc.asynchronousacousticlocalization.utils.CapturedBeaconMessage;
 import hust.cc.asynchronousacousticlocalization.utils.FlagVar;
+import hust.cc.asynchronousacousticlocalization.utils.JSONUtils;
 import hust.cc.asynchronousacousticlocalization.utils.JniUtils;
 
 public class DecodThread extends Decoder implements Runnable{
@@ -66,8 +68,9 @@ public class DecodThread extends Decoder implements Runnable{
         try {
             while (isThreadRunning) {
 
-//                runByStepOnTight();
-                runByStepOnLooseOrthotropic();
+//                runByStepOnTightOrthotropic();
+//                runByStepOnLooseOrthotropic();
+                runByStepOnLoose();
 
             }
         }catch (Exception e){
@@ -90,7 +93,6 @@ public class DecodThread extends Decoder implements Runnable{
 
             if(infoUp.isReferenceSignalExist){
                 if(!upPreambleRecv) {
-                    mTDOACounter++;
                     synchronized (samplesList) {
                         System.arraycopy(samplesList.get(0), 0, bufferUp, 0, processBufferSize);
                         System.arraycopy(samplesList.get(1), 0, bufferUp, processBufferSize, processBufferSize);
@@ -98,11 +100,19 @@ public class DecodThread extends Decoder implements Runnable{
                     }
 
                     int[] ids = decodeAnchorSeqId(bufferUp, infoUp);
-                    processSpeedInformation(buffer);
+                    String jsonStr = encodeJsonMsg(ids);
+                    Message msg = new Message();
+                    msg.what = MESSAGE_JSON;
+                    msg.obj = jsonStr;
+                    mHandler.sendMessage(msg);
+
+                    short[] bufferSpeed = new short[LPreamble];
+                    System.arraycopy(bufferUp,infoUp.index,bufferSpeed,0,LPreamble);
+                    processSpeedInformation(bufferSpeed);
 
 
 
-//                    if(testI<33) {
+                    if(testI<33) {
 //                        short[] buffer2 = new short[processBufferSize+LPreamble+startBeforeMaxCorr];
 //                        System.arraycopy(bufferUp,0,buffer2,0,buffer2.length);
 //                        float[] fft2 = JniUtils.fft(normalization(buffer2),buffer2.length+LPreamble);
@@ -111,9 +121,9 @@ public class DecodThread extends Decoder implements Runnable{
 //                        System.arraycopy(corr2,0,testCorr,corr2.length*testI,corr2.length);
 //                        float[] fitVals2 = getFitValsFromCorr(corr2);
 //                        System.arraycopy(fitVals2,0,testFitVals,fitVals2.length*testI,fitVals2.length);
-//                        System.arraycopy(bufferUp, 0, testData, processBufferSize * testI * 3, processBufferSize*3);
-//                    }
-//                    testI++;
+                        System.arraycopy(bufferUp, 0, testData, processBufferSize * testI * 3, processBufferSize*3);
+                    }
+                    testI++;
                 }
                 upPreambleRecv = true;
             }else{
@@ -126,6 +136,22 @@ public class DecodThread extends Decoder implements Runnable{
 
 //            System.out.println("size:"+samplesList.size()+"    mLoopCounter:"+mLoopCounter+"    tdoa:"+tdoa);
         }
+    }
+
+    private String encodeJsonMsg(int[] ids){
+        CapturedBeaconMessage cbMsg = new CapturedBeaconMessage();
+        cbMsg.capturedAnchorId = ids[0];
+        cbMsg.capturedSequence = ids[1];
+        cbMsg.looperCounter = mLoopCounter;
+        cbMsg.preambleIndex = infoUp.index;
+        cbMsg.selfAnchorId = 111;
+        String jsonStr = "";
+        try {
+            jsonStr = JSONUtils.toJson(cbMsg);
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+        return jsonStr;
     }
 
     private void runByStepOnLooseOrthotropic(){

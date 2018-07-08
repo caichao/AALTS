@@ -24,6 +24,7 @@ public interface FlagVar {
     int MESSAGE_TDOA = 50;
     int MESSAGE_GRAPH = 51;
     int MESSAGE_SPEED = 52;
+    int MESSAGE_JSON = 53;
     //public static final int
 
     /*****************************************************/
@@ -32,14 +33,14 @@ public interface FlagVar {
     // parameters for the preamble
     float TPreamble = 0.04f;
     int BPreamble = 4000;
-    int Fmin = 17500;
-    int Fmax = 21500;
+    int Fmin = 18000;
+    int Fmax = 22000;
 
     // parameter for the symbols
     float TSymbol = 0.03f;
     int BSymbol = 1000;
-    int [] FUpSymbol = new int[]{17500, 18500, 19500, 20500};
-    int [] FDownSymbol = new int[]{21500, 20500, 19500, 18500};
+    int [] FUpSymbol = new int[]{18000, 19000, 20000, 21000};
+    int [] FDownSymbol = new int[]{22000, 21000, 20000, 19000};
     int numberOfSymbols = 4;
 
     // guard interval
@@ -52,7 +53,7 @@ public interface FlagVar {
     float preambleDetectionThreshold= 0.5f;
     int numberOfPreviousSamples = 100;
     float ratioThreshold = 5f;
-    float ratioAvailableThreshold = 0.7f;
+    float ratioAvailableThreshold = 0.4f;
     /*****************************************************/
 
     //becon message
@@ -63,9 +64,9 @@ public interface FlagVar {
     int endBeforeMaxCorr = 0;
     int startBeforeMaxCorr = 200;
 
-    int [] sinSigF = {18000,18200,18400,18600,18800};
+    int [] sinSigF = {17000,17200,17400,17600,17800};
     int speedDetectionSigLength = 65536;
-    int speedDetectionRangeF = 50;
+    int speedDetectionRangeF = 40;
     int soundSpeed = 34000;
 
 
