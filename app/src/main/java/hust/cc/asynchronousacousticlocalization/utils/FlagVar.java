@@ -23,7 +23,7 @@ public interface FlagVar {
     // message type constant
     int MESSAGE_TDOA = 50;
     int MESSAGE_GRAPH = 51;
-    int MESSAGE_SPEED = 52;
+    int MESSAGE_DIFF = 52;
     int MESSAGE_JSON = 53;
     //public static final int
 
@@ -52,7 +52,9 @@ public interface FlagVar {
     /***********************threshold parameters*********************/
     float preambleDetectionThreshold= 0.5f;
     int numberOfPreviousSamples = 100;
-    float ratioThreshold = 5f;
+//    float ratioThreshold = 15f;
+    //caichao
+    float ratioThreshold = 9;
     float ratioAvailableThreshold = 0.4f;
     /*****************************************************/
 

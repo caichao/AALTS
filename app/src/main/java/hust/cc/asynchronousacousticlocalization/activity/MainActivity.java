@@ -16,9 +16,7 @@ import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.jjoe64.graphview.GraphView;
 import com.jjoe64.graphview.series.DataPoint;
-import com.jjoe64.graphview.series.LineGraphSeries;
 
 import org.jtransforms.fft.FloatFFT_1D;
 
@@ -37,8 +35,9 @@ import hust.cc.asynchronousacousticlocalization.processing.DecodeScheduleMessage
 import hust.cc.asynchronousacousticlocalization.processing.Decoder;
 import hust.cc.asynchronousacousticlocalization.processing.HampelFilter;
 import hust.cc.asynchronousacousticlocalization.utils.BioClient;
-import hust.cc.asynchronousacousticlocalization.utils.FileUtils;
+import hust.cc.asynchronousacousticlocalization.utils.CapturedBeaconMessage;
 import hust.cc.asynchronousacousticlocalization.utils.FlagVar;
+import hust.cc.asynchronousacousticlocalization.utils.JSONUtils;
 import hust.cc.asynchronousacousticlocalization.utils.JniUtils;
 import hust.cc.asynchronousacousticlocalization.utils.RspHandler;
 import hust.cc.asynchronousacousticlocalization.utils.TimeStamp;
@@ -50,8 +49,12 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
     Button omitButton;
     @BindView(R.id.recv_sound)
     Button recvButton;
+    @BindView(R.id.clear)
+    Button clearButton;
     @BindView(R.id.text)
     TextView text;
+    @BindView(R.id.text1)
+    TextView text1;
     @BindView(R.id.text2)
     TextView text2;
     // by cc
@@ -60,10 +63,6 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
     @BindView(R.id.button_setting)
     Button settingButton;
 
-    @BindView(R.id.graph)
-    GraphView mGraphView;
-    @BindView(R.id.graph2)
-    GraphView mGraphView2;
 
 
     private boolean isFileWritten = false;
@@ -85,12 +84,7 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
     //RspHandler rspHandler = null;
     private BioClient bioClient = null;
 
-
-    private short[] testArray1 = new short[409600*2];
-    private short[] testArray2 = new short[409600*2];
-    private int testI = 0;
-    private LineGraphSeries<DataPoint> mSeries;
-    private LineGraphSeries<DataPoint> mSeries2;
+    String testCaptureBeaconMessage = "";
     //public static int targetId =
 
 
@@ -152,7 +146,6 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
             date2 = new Date();
             System.out.println("c fft time:" + (date2.getTime() - date1.getTime()));
             System.out.println("c fft size:"+fft.length);
-//            System.out.println("c fft:" + Arrays.toString(fft));
 
             date1 = new Date();
             float[] corr2 = JniUtils.xcorr(fft,fft);
@@ -161,14 +154,6 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
             System.out.println("c corr size:"+corr2.length);
             System.out.println("c corr:" + Arrays.toString(corr2));
 
-//            float[] corrDiff = new float[8192];
-//            for(int i=0;i<corr.length;i++){
-//                corrDiff[i] = Math.abs(corr[i]-corr2[i]);
-//                System.out.println(corrDiff[i]+" "+i);
-//            }
-//            System.out.println("");
-//        }catch (Exception e){
-//            e.printStackTrace();
         }catch (Exception e){
             e.printStackTrace();
         }
@@ -206,8 +191,6 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
 
     private void initParams(){
 
-        mGraphView.setVisibility(View.GONE);
-        mGraphView2.setVisibility(View.GONE);
         decodThread = new DecodThread(myHandler);
         decodThread.initialize(AudioRecorder.getBufferSize()/2,true);
         new Thread(decodThread).start();
@@ -220,19 +203,7 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
                         audioRecorder.startRecord();
                     } else {
                         audioRecorder.finishRecord();
-                        System.out.println("write start");
-                        FileUtils.saveBytes(decodThread.testData, "testData");
-                        FileUtils.saveBytes(DecodThread.downSymbolSamples[0],"down0");
-                        FileUtils.saveBytes(DecodThread.downSymbolSamples[1],"down1");
-                        FileUtils.saveBytes(DecodThread.downSymbolSamples[2],"down2");
-                        FileUtils.saveBytes(DecodThread.downSymbolSamples[3],"down3");
-//                        System.out.println("write start2");
-//                        FileUtils.saveBytes(decodThread.testFFT, "testFFT");
-//                        System.out.println("write start3");
-//                        FileUtils.saveBytes(decodThread.testCorr, "testCorr");
-//                        System.out.println("write start4");
-//                        FileUtils.saveBytes(decodThread.testFitVals, "testFitVals");
-                        System.out.println("write end");
+//                        writeIntoFiles();
 
                     }
                 }catch (Exception e){
@@ -253,11 +224,13 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
                 playThread.fillBufferAndPlay(Decoder.upPreamble);
             }
         });
+        clearButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                decodThread.clear();
+            }
+        });
 
-        mSeries = new LineGraphSeries<>();
-        mGraphView.addSeries(mSeries);
-        mSeries2 = new LineGraphSeries<>();
-        mGraphView2.addSeries(mSeries2);
 
         // thread that handle message from the server on schedule information
         decodeScheduleMessage = DecodeScheduleMessage.getInstance();
@@ -269,6 +242,23 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
         playThread = new PlayThread(decodeScheduleMessage);
         playThread.start();
         Log.e(TAG, "play thread is listening");
+    }
+
+
+    private void writeIntoFiles(){
+//        System.out.println("write start");
+//        FileUtils.saveBytes(decodThread.testData, "testData");
+//        FileUtils.saveBytes(DecodThread.downSymbolSamples[0],"down0");
+//        FileUtils.saveBytes(DecodThread.downSymbolSamples[1],"down1");
+//        FileUtils.saveBytes(DecodThread.downSymbolSamples[2],"down2");
+//        FileUtils.saveBytes(DecodThread.downSymbolSamples[3],"down3");
+//        System.out.println("write start2");
+//        FileUtils.saveBytes(decodThread.testFFT, "testFFT");
+//        System.out.println("write start3");
+//        FileUtils.saveBytes(decodThread.testCorr, "testCorr");
+//        System.out.println("write start4");
+//        FileUtils.saveBytes(decodThread.testFitVals, "testFitVals");
+//        System.out.println("write end");
     }
 
     /**
@@ -292,13 +282,13 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
     // ************************** UI events handling part***********************************************
     @OnClick(R.id.button_test)
     void onTestButtonClicked(){
-        TimeStamp timeStamp = new TimeStamp(identity, 1234);
+
         //okSocket.sendTimeStamp(timeStamp);
         try {
-            bioClient.send(timeStamp.formatMessage().toString());
+            bioClient.send(testCaptureBeaconMessage);
             //client.sendMessage(timeStamp.formatMessage().toString().getBytes(), rspHandler);
             Log.e(TAG, "message to the server sent");
-            Log.e(TAG, timeStamp.formatMessage().toString());
+            Log.e(TAG, testCaptureBeaconMessage);
         }catch (Exception e){
             e.printStackTrace();
         }
@@ -387,24 +377,6 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
             data2[i] = data[2 * i + 1];
         }
 
-//        if(testI<200){
-//            System.arraycopy(data1,0, testArray1,4096*testI,4096);
-//            System.arraycopy(data2,0, testArray2,4096*testI,4096);
-//            testI++;
-//        }else{
-//            if(!isFileWritten) {
-//                isFileWritten = true;
-//                try {
-//                    System.out.println("file write start.");
-//                    FileUtils.saveBytes(testArray1, "data1");
-//                    FileUtils.saveBytes(testArray2, "data2");
-//                    System.out.println("file write end.");
-//                }catch (Exception e){
-//                    e.printStackTrace();
-//                }
-//            }
-//            return;
-//        }
         if(decodThread.samplesList.size()<300) {
             decodThread.fillSamples(data2);
         }
@@ -419,39 +391,65 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
         @Override
         public void handleMessage(Message msg) {
             super.handleMessage(msg);
-            switch (msg.what) {
-                case FlagVar.MESSAGE_TDOA: {
-                    StringBuilder sb = new StringBuilder();
-                    sb.append("tdoa:").append(msg.arg1).append("    ").append("id num:").append(msg.arg2);
-                    text.setText(sb.toString());
+            try {
 
-                    TimeStamp timeStamp = new TimeStamp(MainActivity.identity, msg.arg1);
-                    //okSocket.sendTimeStamp(timeStamp);
 
-                    break;
-                }
-                case FlagVar.MESSAGE_GRAPH: {
-                    synchronized (decodThread.graphBuffer) {
-                        DataPoint[] values = getPoints(decodThread.graphBuffer);
-                        //Log.e(TAG, "sample length = " + s.length);
-                        mSeries.resetData(values);
+                switch (msg.what) {
+                    case FlagVar.MESSAGE_TDOA: {
+                        StringBuilder sb = new StringBuilder();
+                        sb.append("tdoa:").append(msg.arg1).append("    ").append("id num:").append(msg.arg2);
+                        text.setText(sb.toString());
+
+                        TimeStamp timeStamp = new TimeStamp(MainActivity.identity, msg.arg1);
+                        //okSocket.sendTimeStamp(timeStamp);
+
+                        break;
                     }
-                    synchronized ((decodThread.graphBuffer2)){
-                        DataPoint[] values = getPoints(decodThread.graphBuffer2);
-                        mSeries2.resetData(values);
+
+                    case FlagVar.MESSAGE_DIFF: {
+                        StringBuilder sb = new StringBuilder();
+                        sb.append("diff:").append((Long)msg.obj);
+                        text2.setText(sb.toString());
+                        break;
                     }
-                    break;
+                    case FlagVar.MESSAGE_JSON: {
+                        String str = (String) (msg.obj);
+                        testCaptureBeaconMessage = str;
+                        try {
+                            bioClient.send(str);
+                        }catch (Exception e){
+                            e.printStackTrace();
+                        }
+                        CapturedBeaconMessage cbMsg = null;
+                        try {
+                            cbMsg = JSONUtils.decodeCapturedBeaconMessage(str);
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                        String showTxt = String.format(
+                                        "selfAnchorId:    %n" +
+                                        "capturedAnchorId:%n" +
+                                        "capturedSequence:%n" +
+                                        "preambleIndex:   %n" +
+                                        "looperCounter:   %n" +
+                                        "beconCnt:        %n" +
+                                        "speed:           ");
+                        String showTxt1 = String.format("%d%n" +
+                                        "%d%n" +
+                                        "%d%n" +
+                                        "%d%n" +
+                                        "%d%n" +
+                                        "%d%n" +
+                                        "%d cm/s",
+                                cbMsg.selfAnchorId, cbMsg.capturedAnchorId, cbMsg.capturedSequence, cbMsg.preambleIndex, cbMsg.looperCounter,
+                                decodThread.getBeconCnt(),(int)cbMsg.speed);
+                        text.setText(showTxt);
+                        text1.setText(showTxt1);
+                        break;
+                    }
                 }
-                case FlagVar.MESSAGE_SPEED:{
-                    StringBuilder sb = new StringBuilder();
-                    sb.append("speed:").append(msg.arg1);
-                    text2.setText(sb.toString());
-                    break;
-                }
-                case FlagVar.MESSAGE_JSON:{
-                    text.setText((String)(msg.obj));
-                    break;
-                }
+            }catch (Exception e){
+                e.printStackTrace();
             }
         }
 
