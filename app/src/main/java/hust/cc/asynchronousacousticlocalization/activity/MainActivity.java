@@ -204,11 +204,11 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
                     } else {
                         audioRecorder.finishRecord();
 //                        writeIntoFiles();
-
                     }
                 }catch (Exception e){
                     e.printStackTrace();
                 }
+                Toast.makeText(getApplicationContext(),"Start decoding. Do not press this buttion multiple times.", Toast.LENGTH_SHORT).show();
             }
         });
         omitButton.setOnClickListener(new View.OnClickListener() {
@@ -228,6 +228,7 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
             @Override
             public void onClick(View view) {
                 decodThread.clear();
+                Toast.makeText(getApplicationContext(), "Counter reset", Toast.LENGTH_SHORT).show();
             }
         });
 
@@ -298,6 +299,7 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
     void onSettingButtonClicked(){
         settingDialog();
         settingButton.setVisibility(View.INVISIBLE);
+
     }
 
     private void settingDialog(){
@@ -355,6 +357,9 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
                         editor.putInt(addrPortStr,ipPort);
                         editor.putInt(identityStr, MainActivity.identity);
                         editor.apply();
+
+                        recvButton.setVisibility(View.VISIBLE);
+                        clearButton.setVisibility(View.VISIBLE);
                     }
                 })
                 .setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
@@ -417,6 +422,7 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
                         testCaptureBeaconMessage = str;
                         try {
                             bioClient.send(str);
+                            Log.e(TAG, str);
                         }catch (Exception e){
                             e.printStackTrace();
                         }
