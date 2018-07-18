@@ -3,12 +3,14 @@ package hust.cc.asynchronousacousticlocalization.activity;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.SharedPreferences;
+import android.graphics.Color;
 import android.os.Handler;
 import android.os.Message;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.Button;
@@ -201,14 +203,20 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
                 try {
                     if (!audioRecorder.isRecording()) {
                         audioRecorder.startRecord();
+                        Toast.makeText(getApplicationContext(),"Start decoding sound signal.", Toast.LENGTH_SHORT).show();
+                        recvButton.setTextColor(Color.RED);
+                        recvButton.setText("stop receiving");
                     } else {
                         audioRecorder.finishRecord();
+                        Toast.makeText(getApplicationContext(),"Stop decoding sound signal.", Toast.LENGTH_SHORT).show();
+                        recvButton.setTextColor(Color.GREEN);
+                        recvButton.setText("recv sound");
 //                        writeIntoFiles();
                     }
                 }catch (Exception e){
                     e.printStackTrace();
                 }
-                Toast.makeText(getApplicationContext(),"Start decoding. Do not press this buttion multiple times.", Toast.LENGTH_SHORT).show();
+
             }
         });
         omitButton.setOnClickListener(new View.OnClickListener() {
@@ -357,9 +365,10 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
                         editor.putInt(addrPortStr,ipPort);
                         editor.putInt(identityStr, MainActivity.identity);
                         editor.apply();
-
-                        recvButton.setVisibility(View.VISIBLE);
-                        clearButton.setVisibility(View.VISIBLE);
+                        recvButton.setTextColor(Color.GREEN);
+                        clearButton.setTextColor(Color.GREEN);
+                        recvButton.setEnabled(true);
+                        clearButton.setEnabled(true);
                     }
                 })
                 .setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
@@ -477,4 +486,15 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
     public void onServerResponse(String msg) {
 
     }
+
+    public boolean onKeyDown(int keyCode, KeyEvent event){
+        if (keyCode == KeyEvent.KEYCODE_BACK ) {
+            finish();
+            System.exit(0);
+            return true;
+        }
+        return super.onKeyDown(keyCode, event);
+    }
+
+
 }
