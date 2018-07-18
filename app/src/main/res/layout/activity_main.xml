@@ -23,11 +23,17 @@
             android:id="@+id/recv_sound"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:textColor="@color/red"
+            android:textSize="@dimen/text_size"
+            android:visibility="invisible"
             android:text="recv sound"
             />
         <Button
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:textSize="@dimen/text_size"
+            android:textColor="@color/red"
+            android:visibility="invisible"
             android:id="@+id/clear"
             android:text="clear"/>
     </LinearLayout>
@@ -36,6 +42,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="@string/button_test"
+        android:visibility="gone"
         android:id="@+id/button_test"
         />
 
@@ -43,6 +50,8 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="@string/button_setting"
+        android:textSize="@dimen/text_size"
+        android:textColor="@color/darkgreen"
         android:id="@+id/button_setting"
         />
 

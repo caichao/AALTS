@@ -46,10 +46,10 @@ public class BioClient implements Runnable{
                     printStream.flush();
                 }catch (Exception e){
                     e.printStackTrace();
-                    printStream.close();
                     try {
+                        printStream.close();
                         socket.close();
-                    } catch (IOException e1) {
+                    } catch (Exception e1) {
                         e1.printStackTrace();
                     }
                     break;

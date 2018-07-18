@@ -94,6 +94,7 @@ public class DecodThread extends Decoder implements Runnable{
             float[] fft = JniUtils.fft(normalization(buffer),buffer.length+ LPreamble);
 
             infoUp = getIndexMaxVarInfoFromFDomain(fft,upPreambleFFT);
+            infoUp = getIndexMaxVarInfoFromFDomain(fft,upPreambleFFT);
 
             if(infoUp.isReferenceSignalExist){
                 if(!upPreambleRecv) {
@@ -260,7 +261,7 @@ public class DecodThread extends Decoder implements Runnable{
                 }
                 tdoa = processTDOAInformation();
             }
-            System.out.println("size:"+samplesList.size()+"    mLoopCounter:"+mLoopCounter+"    tdoa:"+tdoa);
+            //System.out.println("size:"+samplesList.size()+"    mLoopCounter:"+mLoopCounter+"    tdoa:"+tdoa);
         }
     }
 
@@ -365,7 +366,7 @@ public class DecodThread extends Decoder implements Runnable{
                 tdoa = processTDOAInformation();
             }
 
-            System.out.println("size:"+samplesList.size()+"    mLoopCounter:"+mLoopCounter+"    tdoa:"+tdoa);
+            //System.out.println("size:"+samplesList.size()+"    mLoopCounter:"+mLoopCounter+"    tdoa:"+tdoa);
             if(mLoopCounter > 100000){
                 return;
             }

@@ -381,7 +381,7 @@ public class Decoder implements FlagVar{
         if(corr[indexMaxVarInfo.index] > FlagVar.preambleDetectionThreshold && ratio > ratioThreshold) {
             indexMaxVarInfo.isReferenceSignalExist = true;
         }
-        System.out.println("index:"+indexMaxVarInfo.index+"   ratio:"+ratio+"   maxCorr:"+corr[indexMaxVarInfo.index]);
+        //System.out.println("index:"+indexMaxVarInfo.index+"   ratio:"+ratio+"   maxCorr:"+corr[indexMaxVarInfo.index]);
         return indexMaxVarInfo;
     }
 
