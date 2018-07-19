@@ -3,12 +3,14 @@ package hust.cc.asynchronousacousticlocalization.processing;
 import android.os.Handler;
 import android.os.Message;
 
+import java.math.BigDecimal;
 import java.util.ArrayDeque;
 import java.util.Date;
 import java.util.Deque;
 import java.util.LinkedList;
 import java.util.List;
 
+import hust.cc.asynchronousacousticlocalization.activity.MainActivity;
 import hust.cc.asynchronousacousticlocalization.utils.CapturedBeaconMessage;
 import hust.cc.asynchronousacousticlocalization.utils.FlagVar;
 import hust.cc.asynchronousacousticlocalization.utils.JSONUtils;
@@ -30,16 +32,17 @@ public class DecodThread extends Decoder implements Runnable{
     public short[] testData = new short[4096*3*33];
     public List<Short> testIndex = new LinkedList<>();
     private short testI = 0;
-    public float[] testFFT = new float[8192*2*33];
-    public float[] testCorr = new float[8192*33];
-    public float[] testFitVals = new float[6216*33];
+
 
     private boolean lastDetected = false;
     private boolean upPreambleRecv = false;
     private boolean downPreambleRecv = false;
     IndexMaxVarInfo infoUp;
     IndexMaxVarInfo infoDown;
-
+    private int beconCnt = 0;
+    private float speed;
+    private List<CapturedBeaconMessage> cbMsgs;
+    private int[] ids;
 
     private IndexMaxVarInfo mIndexMaxVarInfo;
 
@@ -48,6 +51,7 @@ public class DecodThread extends Decoder implements Runnable{
         mTDOAUtils = new TDOAUtils();
         preambleInfoList = new ArrayDeque<>();
         samplesList = new LinkedList<short[]>();
+        cbMsgs = new LinkedList<>();
         this.mHandler = mHandler;
     }
 
@@ -90,6 +94,7 @@ public class DecodThread extends Decoder implements Runnable{
             float[] fft = JniUtils.fft(normalization(buffer),buffer.length+ LPreamble);
 
             infoUp = getIndexMaxVarInfoFromFDomain(fft,upPreambleFFT);
+            infoUp = getIndexMaxVarInfoFromFDomain(fft,upPreambleFFT);
 
             if(infoUp.isReferenceSignalExist){
                 if(!upPreambleRecv) {
@@ -98,32 +103,24 @@ public class DecodThread extends Decoder implements Runnable{
                         System.arraycopy(samplesList.get(1), 0, bufferUp, processBufferSize, processBufferSize);
                         System.arraycopy(samplesList.get(2), 0, bufferUp, processBufferSize * 2, processBufferSize);
                     }
+                    beconCnt++;
 
-                    int[] ids = decodeAnchorSeqId(bufferUp, infoUp);
-                    String jsonStr = encodeJsonMsg(ids);
-                    Message msg = new Message();
-                    msg.what = MESSAGE_JSON;
-                    msg.obj = jsonStr;
-                    mHandler.sendMessage(msg);
+                    ids = decodeAnchorSeqId(bufferUp, infoUp);
+
 
                     short[] bufferSpeed = new short[LPreamble];
                     System.arraycopy(bufferUp,infoUp.index,bufferSpeed,0,LPreamble);
                     processSpeedInformation(bufferSpeed);
 
+                    sendMsg();
+                    calBeconDiff();
 
 
-                    if(testI<33) {
-//                        short[] buffer2 = new short[processBufferSize+LPreamble+startBeforeMaxCorr];
-//                        System.arraycopy(bufferUp,0,buffer2,0,buffer2.length);
-//                        float[] fft2 = JniUtils.fft(normalization(buffer2),buffer2.length+LPreamble);
-//                        System.arraycopy(fft2,0,testFFT,fft2.length*testI,fft2.length);
-//                        float[] corr2 = JniUtils.xcorr(fft2,upPreambleFFT);
-//                        System.arraycopy(corr2,0,testCorr,corr2.length*testI,corr2.length);
-//                        float[] fitVals2 = getFitValsFromCorr(corr2);
-//                        System.arraycopy(fitVals2,0,testFitVals,fitVals2.length*testI,fitVals2.length);
-                        System.arraycopy(bufferUp, 0, testData, processBufferSize * testI * 3, processBufferSize*3);
-                    }
-                    testI++;
+
+//                    if(testI<33) {
+//                        System.arraycopy(bufferUp, 0, testData, processBufferSize * testI * 3, processBufferSize*3);
+//                    }
+//                    testI++;
                 }
                 upPreambleRecv = true;
             }else{
@@ -138,13 +135,35 @@ public class DecodThread extends Decoder implements Runnable{
         }
     }
 
-    private String encodeJsonMsg(int[] ids){
+    public void clear(){
+        beconCnt = 0;
+    }
+
+    public int getBeconCnt(){
+        return beconCnt;
+    }
+
+    private void sendMsg(){
+        String jsonStr = encodeJsonMsg();
+        Message msg = new Message();
+        msg.what = MESSAGE_JSON;
+        msg.obj = jsonStr;
+        mHandler.sendMessage(msg);
+    }
+
+    private String encodeJsonMsg(){
         CapturedBeaconMessage cbMsg = new CapturedBeaconMessage();
         cbMsg.capturedAnchorId = ids[0];
         cbMsg.capturedSequence = ids[1];
         cbMsg.looperCounter = mLoopCounter;
         cbMsg.preambleIndex = infoUp.index;
-        cbMsg.selfAnchorId = 111;
+        cbMsg.selfAnchorId = MainActivity.identity;
+        cbMsg.speed = speed;
+
+        cbMsgs.add(cbMsg);
+        if(cbMsgs.size() > 10){
+            cbMsgs.remove(0);
+        }
         String jsonStr = "";
         try {
             jsonStr = JSONUtils.toJson(cbMsg);
@@ -152,6 +171,22 @@ public class DecodThread extends Decoder implements Runnable{
             e.printStackTrace();
         }
         return jsonStr;
+    }
+
+    private long calBeconDiff(){
+        if(cbMsgs.size() < 2){
+            return 0;
+        }
+        CapturedBeaconMessage cbMsg1 = cbMsgs.get(cbMsgs.size()-1);
+        CapturedBeaconMessage cbMsg2 = cbMsgs.get(cbMsgs.size()-2);
+        long index1 = cbMsg1.looperCounter*processBufferSize+cbMsg1.preambleIndex;
+        long index2 = cbMsg2.looperCounter*processBufferSize+cbMsg2.preambleIndex;
+        long diff = index1-index2;
+        Message msg = new Message();
+        msg.what = MESSAGE_DIFF;
+        msg.obj = (Long)diff;
+        mHandler.sendMessage(msg);
+        return diff;
     }
 
     private void runByStepOnLooseOrthotropic(){
@@ -185,18 +220,6 @@ public class DecodThread extends Decoder implements Runnable{
                     tdoaUtils.TDOACounter = mTDOACounter;
                     tdoaUtils.correspondingAnchorID = anchorID;
                     preambleInfoList.add(tdoaUtils);
-//                    if(testI<33) {
-//                        short[] buffer2 = new short[processBufferSize+LPreamble+startBeforeMaxCorr];
-//                        System.arraycopy(bufferUp,0,buffer2,0,buffer2.length);
-//                        float[] fft2 = JniUtils.fft(normalization(buffer2),buffer2.length+LPreamble);
-//                        System.arraycopy(fft2,0,testFFT,fft2.length*testI,fft2.length);
-//                        float[] corr2 = JniUtils.xcorr(fft2,upPreambleFFT);
-//                        System.arraycopy(corr2,0,testCorr,corr2.length*testI,corr2.length);
-//                        float[] fitVals2 = getFitValsFromCorr(corr2);
-//                        System.arraycopy(fitVals2,0,testFitVals,fitVals2.length*testI,fitVals2.length);
-//                        System.arraycopy(bufferUp, 0, testData, processBufferSize * testI * 3, processBufferSize*3);
-//                    }
-//                    testI++;
                 }
                 upPreambleRecv = true;
             }else{
@@ -238,7 +261,7 @@ public class DecodThread extends Decoder implements Runnable{
                 }
                 tdoa = processTDOAInformation();
             }
-            System.out.println("size:"+samplesList.size()+"    mLoopCounter:"+mLoopCounter+"    tdoa:"+tdoa);
+            //System.out.println("size:"+samplesList.size()+"    mLoopCounter:"+mLoopCounter+"    tdoa:"+tdoa);
         }
     }
 
@@ -260,9 +283,6 @@ public class DecodThread extends Decoder implements Runnable{
                 float[] samplesF = normalization(bufferedSamples,0,processBufferSize+LPreamble+startBeforeMaxCorr-1);
                 fft = JniUtils.fft(samplesF,samplesF.length+ LPreamble);
             }
-
-            //open this to see corr in graphs
-//                    testGraph(fft);
 
             // 1. the first step is to check the existence of preamble either up or down
             mIndexMaxVarInfo.isReferenceSignalExist = false;
@@ -346,7 +366,7 @@ public class DecodThread extends Decoder implements Runnable{
                 tdoa = processTDOAInformation();
             }
 
-            System.out.println("size:"+samplesList.size()+"    mLoopCounter:"+mLoopCounter+"    tdoa:"+tdoa);
+            //System.out.println("size:"+samplesList.size()+"    mLoopCounter:"+mLoopCounter+"    tdoa:"+tdoa);
             if(mLoopCounter > 100000){
                 return;
             }
@@ -357,34 +377,13 @@ public class DecodThread extends Decoder implements Runnable{
 
     public void processSpeedInformation(short[] buffer){
         float fshift = getFshift(normalization(buffer),sinSigF,speedDetectionSigLength,speedDetectionRangeF,Fs);
-        float speed = (int)(fshift*soundSpeed/Fs);
-        Message msg = new Message();
-        msg.what = MESSAGE_SPEED;
-        msg.arg1 = (int)speed;
-        mHandler.sendMessage(msg);
+        float speed = fshift*soundSpeed/Fs;
+        BigDecimal b  =   new  BigDecimal(speed);
+        this.speed   =  b.setScale(2,  BigDecimal.ROUND_HALF_UP).floatValue();
     }
 
-    public void testGraph(float[] fft){
-        float[] data = xcorr(fft,normalization(upPreamble),true);
-//        int index1 = getFitPos(data);
-        synchronized (graphBuffer) {
-            System.arraycopy(data, 0, graphBuffer, 0, graphBuffer.length);
-        }
-        data = xcorr(fft,normalization(downPreamble),true);
-//        int index2 = getFitPos(data);
-        synchronized (graphBuffer2) {
-            System.arraycopy(data, 0, graphBuffer2, 0, graphBuffer2.length);
-        }
-
-//        int tdoaTest = index2-index1;
-//        System.out.println("tdoa:"+tdoaTest);
-//        if(Math.abs(tdoaTest) > 30){
-//            System.out.println("out of range");
-//        }
-
-        Message msg = new Message();
-        msg.what = MESSAGE_GRAPH;
-        mHandler.sendMessage(msg);
+    public float getSpeed(){
+        return speed;
     }
 
     /*

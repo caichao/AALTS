@@ -7,38 +7,42 @@
     android:orientation="vertical"
     tools:context=".activity.MainActivity">
 
-    <Button
-        android:id="@+id/omit_sound"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="发出声音"/>
 
-    <Button
-        android:id="@+id/recv_sound"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="接收声音"
-        />
 
-    <TextView
-        android:id="@+id/text"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Hello World!" />
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+        <Button
+            android:id="@+id/omit_sound"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:visibility="gone"
+            android:text="omit sound"/>
 
-    <TextView
-        android:id="@+id/text2"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Hello World!" />
+        <Button
+            android:id="@+id/recv_sound"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="@color/grey"
+            android:textSize="@dimen/text_size"
+            android:enabled="false"
+            android:text="recv sound"
+            />
+        <Button
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="@dimen/text_size"
+            android:textColor="@color/grey"
+            android:enabled="false"
+            android:id="@+id/clear"
+            android:text="clear"/>
+    </LinearLayout>
 
-    <!--  ***** by cc  ****** -->
     <Button
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="@string/button_test"
-        android:textColor="@color/red"
-        android:textSize="@dimen/text_size"
+        android:visibility="gone"
         android:id="@+id/button_test"
         />
 
@@ -46,19 +50,39 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="@string/button_setting"
-        android:textColor="@color/darkblue"
         android:textSize="@dimen/text_size"
+        android:textColor="@color/darkgreen"
         android:id="@+id/button_setting"
         />
 
-    <com.jjoe64.graphview.GraphView
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="140dp"
-        android:id="@+id/graph"/>
+        android:layout_height="wrap_content"
+        android:gravity="center">
+        <TextView
+            android:id="@+id/text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="properties"
+            android:textColor="@color/black"
+            android:textSize="20dp"/>
 
-    <com.jjoe64.graphview.GraphView
-        android:layout_width="match_parent"
-        android:layout_height="140dp"
-        android:id="@+id/graph2"/>
+        <TextView
+            android:id="@+id/text1"
+            android:layout_marginLeft="30dp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="values"
+            android:textColor="@color/red"
+            android:textSize="20dp"/>
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/text2"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text=""
+        android:visibility="gone"/>
+
 
 </LinearLayout>

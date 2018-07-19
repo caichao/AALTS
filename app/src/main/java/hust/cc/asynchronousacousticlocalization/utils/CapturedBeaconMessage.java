@@ -6,6 +6,8 @@ public class CapturedBeaconMessage implements Cloneable{
     public int capturedSequence;
     public int preambleIndex;
     public long looperCounter;
+    public float speed;
+
 
     @Override
     public String toString() {
@@ -15,6 +17,7 @@ public class CapturedBeaconMessage implements Cloneable{
                 ", capturedSequence=" + capturedSequence +
                 ", preambleIndex=" + preambleIndex +
                 ", looperCounter=" + looperCounter +
+                ", speed=" + speed +
                 '}';
     }
 

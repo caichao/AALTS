@@ -30,18 +30,19 @@ public class JSONUtils {
     public static final String capturedSequenceString = "capturedSequence";
     public static final String  preambleIndexString = "preambleIndex";
     public static final String looperCounterString = "looperCounter";
+    public static final String speedString = "speed";
     public static final String roleAnchorString = "anchor";
     public static final String roleTargetString = "target";
     public static final String roleString = "role";
 
-    public JSONObject encodeJsonMessage(String signal) throws Exception{
+    public static JSONObject encodeJsonMessage(String signal) throws Exception{
         JSONObject jsonObject = new JSONObject();
         jsonObject.put(messageTypeHead, shedualMessage);
         jsonObject.put(signalTypeMessage, signal);
         return jsonObject;
     }
 
-    public MessageFromClient decodeJsonMessage(String message) throws Exception{
+    public static MessageFromClient decodeJsonMessage(String message) throws Exception{
         MessageFromClient messageFromClient = new MessageFromClient();
         JSONObject jsonObject = new JSONObject(message);
         messageFromClient.anchorID = jsonObject.getInt(anchorIDHead);
@@ -49,7 +50,7 @@ public class JSONUtils {
         return messageFromClient;
     }
 
-    public CapturedBeaconMessage decodeCapturedBeaconMessage(String message) throws Exception{
+    public static CapturedBeaconMessage decodeCapturedBeaconMessage(String message) throws Exception{
         CapturedBeaconMessage capturedBeaconMessage = new CapturedBeaconMessage();
         JSONObject jsonObject = new JSONObject(message);
         capturedBeaconMessage.selfAnchorId = jsonObject.getInt(selfAnchorIdString);
@@ -57,17 +58,18 @@ public class JSONUtils {
         capturedBeaconMessage.capturedSequence = jsonObject.getInt(capturedSequenceString);
         capturedBeaconMessage.preambleIndex = jsonObject.getInt(preambleIndexString);
         capturedBeaconMessage.looperCounter = jsonObject.getLong(looperCounterString);
+        capturedBeaconMessage.speed = (float) jsonObject.getDouble(speedString);
         return  capturedBeaconMessage;
     }
 
-    public String decodeRole(String message) throws Exception{
+    public static String decodeRole(String message) throws Exception{
         String role = null;
         JSONObject jsonObject = new JSONObject(message);
         role = jsonObject.getString(roleString);
         return role;
     }
 
-    public class MessageFromClient{
+    public static class MessageFromClient{
         public int anchorID;
         public int timeStamps;
         //public List<Integer> timeStamps;

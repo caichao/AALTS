@@ -375,11 +375,13 @@ public class Decoder implements FlagVar{
      */
     public IndexMaxVarInfo preambleDetection(float[] corr, IndexMaxVarInfo indexMaxVarInfo){
         indexMaxVarInfo.isReferenceSignalExist = false;
-        float ratio = indexMaxVarInfo.fitVal*corr[indexMaxVarInfo.index];
+//        float ratio = indexMaxVarInfo.fitVal*corr[indexMaxVarInfo.index];
+//        float ratio = indexMaxVarInfo.fitVal;
+        float ratio = (float) (indexMaxVarInfo.fitVal*Math.log(corr[indexMaxVarInfo.index]+1));
         if(corr[indexMaxVarInfo.index] > FlagVar.preambleDetectionThreshold && ratio > ratioThreshold) {
             indexMaxVarInfo.isReferenceSignalExist = true;
         }
-        System.out.println("index:"+indexMaxVarInfo.index+"   ratio:"+ratio+"   maxCorr:"+corr[indexMaxVarInfo.index]);
+        //System.out.println("index:"+indexMaxVarInfo.index+"   ratio:"+ratio+"   maxCorr:"+corr[indexMaxVarInfo.index]);
         return indexMaxVarInfo;
     }
 
@@ -408,7 +410,7 @@ public class Decoder implements FlagVar{
             corr = JniUtils.xcorr(fft,downSymbolFFTs[i]);
             float max = Algorithm.getMaxInfo(corr, 0, corr.length-1).fitVal;
             float mean = Algorithm.meanValue(corr, 0, corr.length-1);
-            maxRatios[i] = max/mean;
+            maxRatios[i] = max*max/mean;
         }
 
         int id = Algorithm.getMaxInfo(maxRatios,0,maxRatios.length-1).index;
