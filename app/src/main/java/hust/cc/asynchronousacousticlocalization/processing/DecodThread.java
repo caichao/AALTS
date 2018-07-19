@@ -277,12 +277,8 @@ public class DecodThread extends Decoder implements Runnable{
             mLoopCounter++;
             //compute the fft of the bufferedSamples, it will be used twice. It's computed here to reduce time cost.
             float[] fft;
-            if(!useJni) {
-                fft = getData1HalfFFtFromSignals(bufferedSamples, 0, processBufferSize+LPreamble+startBeforeMaxCorr- 1, upPreamble.length);
-            }else {
-                float[] samplesF = normalization(bufferedSamples,0,processBufferSize+LPreamble+startBeforeMaxCorr-1);
-                fft = JniUtils.fft(samplesF,samplesF.length+ LPreamble);
-            }
+            float[] samplesF = normalization(bufferedSamples,0,processBufferSize+LPreamble+startBeforeMaxCorr-1);
+            fft = JniUtils.fft(samplesF,samplesF.length+ LPreamble);
 
             // 1. the first step is to check the existence of preamble either up or down
             mIndexMaxVarInfo.isReferenceSignalExist = false;

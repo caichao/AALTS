@@ -100,66 +100,7 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
 //        testHampel();
     }
 
-    private void testJni(){
-        try {
-            Decoder decoder = new Decoder();
-            System.out.println(JniUtils.sayHello());
-            float[] data0 = new float[8192];
-            float[] data = new float[8192];
-            float[] dataF = new float[8192];
-            float[] dataFF = new float[8192];
-            for (int i = 0; i < Decoder.upPreamble.length; i++) {
-                data0[i] = Decoder.upPreamble[i];
-                dataFF[i] = Decoder.upPreamble[i];
-            }
 
-
-            FloatFFT_1D floatFFT_1D = new FloatFFT_1D(8192);
-            floatFFT_1D.realForward(dataFF);
-            floatFFT_1D.realForward(dataFF);
-            floatFFT_1D.realForward(dataFF);
-            floatFFT_1D.realForward(dataFF);
-            Date date1 = new Date();
-            for(int i=0;i<100;i++) {
-                System.arraycopy(data0,0,dataF,0,8192);
-                floatFFT_1D.realForward(dataF);
-            }
-            Date date2 = new Date();
-            System.out.println("java fft time:" + (date2.getTime() - date1.getTime()));
-            System.out.println("java fft size:"+dataF.length);
-            System.out.println("java fft:" + Arrays.toString(dataF));
-
-            date1 = new Date();
-            float[] corr = decoder.xcorr(dataF,dataF,true);
-            date2 = new Date();
-            System.out.println("java corr time:" + (date2.getTime() - date1.getTime()));
-            System.out.println("java corr size:"+corr.length);
-            System.out.println("java corr:" + Arrays.toString(corr));
-
-
-
-            date1 = new Date();
-            System.arraycopy(data0,0,data,0,8192);
-            float[] fft;
-            fft = JniUtils.fft(data,8192);
-            for(int i=0;i<99;i++){
-                fft = JniUtils.fft(data,8192);
-            }
-            date2 = new Date();
-            System.out.println("c fft time:" + (date2.getTime() - date1.getTime()));
-            System.out.println("c fft size:"+fft.length);
-
-            date1 = new Date();
-            float[] corr2 = JniUtils.xcorr(fft,fft);
-            date2 = new Date();
-            System.out.println("c corr time:" + (date2.getTime() - date1.getTime()));
-            System.out.println("c corr size:"+corr2.length);
-            System.out.println("c corr:" + Arrays.toString(corr2));
-
-        }catch (Exception e){
-            e.printStackTrace();
-        }
-    }
 
     private void testHampel(){
         try {
@@ -194,7 +135,7 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
     private void initParams(){
 
         decodThread = new DecodThread(myHandler);
-        decodThread.initialize(AudioRecorder.getBufferSize()/2,true);
+        decodThread.initialize(AudioRecorder.getBufferSize()/2);
         new Thread(decodThread).start();
         audioRecorder.recordingCallback(this);
         recvButton.setOnClickListener(new View.OnClickListener() {
