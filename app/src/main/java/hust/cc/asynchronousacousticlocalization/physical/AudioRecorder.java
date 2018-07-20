@@ -145,7 +145,7 @@ public class AudioRecorder implements IAudioRecorder{
         int bufferSize = Math.max(BUFFER_BYTES_ELEMENTS * BUFFER_BYTES_PER_ELEMENT,
                 AudioRecord.getMinBufferSize(RECORDER_SAMPLE_RATE, RECORDER_CHANNELS_IN, RECORDER_AUDIO_ENCODING));
 
-        int size = 1024;
+        int size = 4096;
         while(size < bufferSize){
             size = size * 2;
         }
