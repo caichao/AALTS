@@ -12,9 +12,12 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
+import android.view.MotionEvent;
 import android.view.View;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -64,6 +67,10 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
     Button testButton;
     @BindView(R.id.button_setting)
     Button settingButton;
+    @BindView(R.id.threshold)
+    EditText editThreshold;
+    @BindView(R.id.out_linear)
+    LinearLayout outLinear;
 
 
 
@@ -186,6 +193,36 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
         decodeScheduleMessage = DecodeScheduleMessage.getInstance();
         decodeScheduleMessage.start();
         Log.e(TAG, "decodeSchedule thread started");
+        try {
+            editThreshold.setText(Float.toString(Decoder.rThreshold));
+            editThreshold.setOnFocusChangeListener(new View.OnFocusChangeListener() {
+                @Override
+                public void onFocusChange(View v, boolean hasFocus) {
+                    float val = Float.parseFloat(editThreshold.getText().toString());
+                    if(hasFocus == false){
+                        Decoder.rThreshold = val;
+                    }
+
+                }
+            });
+
+
+            outLinear.setOnTouchListener(new View.OnTouchListener() {
+                @Override
+                public boolean onTouch(View view, MotionEvent motionEvent) {
+                    outLinear.setFocusable(true);
+                    outLinear.setFocusableInTouchMode(true);
+                    outLinear.requestFocus();
+                    InputMethodManager imm = (InputMethodManager) MainActivity.this
+                            .getSystemService(Context.INPUT_METHOD_SERVICE);
+                    imm.hideSoftInputFromWindow(view.getWindowToken(), 0);
+                    return false;
+
+                }
+            });
+        }catch (Exception e){
+            e.printStackTrace();
+        }
 
 
         Log.e(TAG, "socket thread start");

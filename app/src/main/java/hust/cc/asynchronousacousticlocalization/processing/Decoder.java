@@ -43,6 +43,8 @@ public class Decoder implements FlagVar{
     protected short[] bufferUp;
     protected short[] bufferDown;
 
+    public static float rThreshold = ratioThreshold;
+
     public void initialize(int processBufferSize){
         this.processBufferSize = processBufferSize;
         //this value is abandoned
@@ -235,7 +237,7 @@ public class Decoder implements FlagVar{
         best method considering the fitVals and the corr.
          */
         float ratio = (float) (indexMaxVarInfo.fitVal*Math.log(corr[indexMaxVarInfo.index]+1));
-        if(corr[indexMaxVarInfo.index] > FlagVar.preambleDetectionThreshold && ratio > ratioThreshold) {
+        if(corr[indexMaxVarInfo.index] > FlagVar.preambleDetectionThreshold && ratio > rThreshold) {
             indexMaxVarInfo.isReferenceSignalExist = true;
         }
         //System.out.println("index:"+indexMaxVarInfo.index+"   ratio:"+ratio+"   maxCorr:"+corr[indexMaxVarInfo.index]);

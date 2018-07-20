@@ -5,6 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
+    android:id="@+id/out_linear"
     tools:context=".activity.MainActivity">
 
 
@@ -36,6 +37,25 @@
             android:enabled="false"
             android:id="@+id/clear"
             android:text="clear"/>
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="threshold:"
+            android:textSize="24dp"/>
+        <EditText
+            android:layout_width="80dp"
+            android:layout_height="wrap_content"
+            android:id="@+id/threshold"
+            android:textSize="24dp"
+            android:inputType="number|numberDecimal"
+            />
     </LinearLayout>
 
     <Button
