@@ -34,6 +34,7 @@ public class Decoder implements FlagVar{
     public int preambleCorrLen = getFFTLen(processBufferSize+LPreamble,LPreamble);
     public int symbolCorrLen = getFFTLen(LSymbol,LSymbol);
 
+    //we calculate the fft before decoding in order to reduce computation time.
     public float[] upPreambleFFT;
     public float[] downPreambleFFT;
     public float[][] upSymbolFFTs;
@@ -44,9 +45,15 @@ public class Decoder implements FlagVar{
 
     public void initialize(int processBufferSize){
         this.processBufferSize = processBufferSize;
+        //this value is abandoned
         bufferedSamples = new short[processBufferSize+beconMessageLength+startBeforeMaxCorr+LPreamble];
         bufferUp = new short[processBufferSize*3];
         bufferDown = new short[processBufferSize*3];
+        /*
+            the fft we use must have data length to be the power of 2. And we use the fft to compute the correlation, so
+        the correlation data length should be the min value larger than the sum of the 2 buffers size that is the power of 2.
+        the fft data length should also be this. we compute them here.
+        */
         preambleCorrLen = getFFTLen(processBufferSize+LPreamble+startBeforeMaxCorr,LPreamble);
         symbolCorrLen = getFFTLen(LSymbol,LSymbol);
 
@@ -73,7 +80,7 @@ public class Decoder implements FlagVar{
 
 
 
-
+    //this value is abandoned
     public short[] bufferedSamples = new short[processBufferSize+beconMessageLength+startBeforeMaxCorr+LPreamble];
 
 
@@ -100,24 +107,30 @@ public class Decoder implements FlagVar{
 
 
     /**
-     * correlation results, return both the max value and its index
+     * compute the best fit position of the chirp signal (data2) from data1.
+     * @auther ruinan jin
      * @param data1: audio samples
      * @param data2: reference signal
-     * @return: return the max value and its index
+     * @param isFdomain: whether the data is frequency domain data.
+     * @return: return the fit value and its index
      */
 
     public IndexMaxVarInfo getIndexMaxVarInfoFromFloats(float[] data1,float[] data2, boolean isFdomain){
         IndexMaxVarInfo indexMaxVarInfo = new IndexMaxVarInfo();
-
-        float[] corr;
-        corr = JniUtils.xcorr(data1,data2);
-
-
+        if(!isFdomain){
+            int len = getFFTLen(data1.length,data2.length);
+            data1 = JniUtils.fft(data1,len);
+            data2 = JniUtils.fft(data2,len);
+        }
+        //compute the corr
+        float[] corr = JniUtils.xcorr(data1,data2);
+        //compute the fit vals
         float[] fitVals = getFitValsFromCorr(corr);
+        //get the fit index
         int index = getFitPos(fitVals, corr);
         indexMaxVarInfo.index = index;
         indexMaxVarInfo.fitVal = fitVals[index];
-
+        //detect whether the chirp signal exists.
         IndexMaxVarInfo resultInfo = preambleDetection(corr,indexMaxVarInfo);
         return resultInfo;
     }
@@ -126,9 +139,10 @@ public class Decoder implements FlagVar{
 
 
 
-    /** corr is the correlation array, chirpLength is the chirp signal's length. return the postion of the max correlation.
+    /** compute the position of the max value of the fitVals, while the corr of this position should be larger than a threshold.
      * @auther Ruinan Jin
-     * @param fitVals
+     * @param fitVals fit value arrays.
+     * @param corr correlation arrays.
      * @return
      */
     public int getFitPos(float [] fitVals, float[] corr){
@@ -149,6 +163,13 @@ public class Decoder implements FlagVar{
         return index;
     }
 
+    /**
+     * get the fitVals from corr. fitVals is the value by which the corr is devided the average of the previous 200(startBeforeMaxCorr) corrs.
+     * The first 200 fitVals is zero, while this is why the buffer length should be added by startBeforeMaxCorr.
+     * @auther ruinan jin
+     * @param corr
+     * @return fitVals
+     */
     public float[] getFitValsFromCorr(float [] corr){
         float[] fitVals = new float[processBufferSize+LPreamble+startBeforeMaxCorr];
         float val = 0;
@@ -167,25 +188,25 @@ public class Decoder implements FlagVar{
         return fitVals;
     }
 
-
-
-
+    /**
+     * getIndexMaxVarInfoFromFloats method for only frequency domain.
+     * @auther ruinan jin
+     * @param sf
+     * @param rf
+     * @return
+     */
     public IndexMaxVarInfo getIndexMaxVarInfoFromFDomain(float[] sf, float[] rf){
         IndexMaxVarInfo indexMaxVarInfo = getIndexMaxVarInfoFromFloats(sf,rf,true);
         return indexMaxVarInfo;
     }
 
-
-
-
-
-
-
-
-
-
-
-
+    /**
+     * compute the min value larger than the sum of len1 and len2 which is the power of 2.
+     * @auther ruinan jin
+     * @param len1
+     * @param len2
+     * @return
+     */
     public int getFFTLen(int len1, int len2){
         int len = 1;
         while(len < len1+len2){
@@ -200,6 +221,7 @@ public class Decoder implements FlagVar{
 
     /**
      * detect whether the preamble exist
+     * @auther ruinan jin
      * @param corr - correlation array
      * @param indexMaxVarInfo - the info of the max corr index
      * @return true indicate the presence of the corresponding preamble and vise versa
@@ -208,6 +230,10 @@ public class Decoder implements FlagVar{
         indexMaxVarInfo.isReferenceSignalExist = false;
 //        float ratio = indexMaxVarInfo.fitVal*corr[indexMaxVarInfo.index];
 //        float ratio = indexMaxVarInfo.fitVal;
+        /*
+            we mainly detect the preamble by thersholding the value of the fitVals*log(corr+1) in the fit position. it's tested to be the
+        best method considering the fitVals and the corr.
+         */
         float ratio = (float) (indexMaxVarInfo.fitVal*Math.log(corr[indexMaxVarInfo.index]+1));
         if(corr[indexMaxVarInfo.index] > FlagVar.preambleDetectionThreshold && ratio > ratioThreshold) {
             indexMaxVarInfo.isReferenceSignalExist = true;
@@ -216,6 +242,13 @@ public class Decoder implements FlagVar{
         return indexMaxVarInfo;
     }
 
+    /**
+     * decode the anchor and the sequence id from the buffer.
+     * @auther ruinan jin
+     * @param s buffer
+     * @param info fit val information
+     * @return
+     */
 
     public int[] decodeAnchorSeqId(short[] s ,IndexMaxVarInfo info){
         int[] ids = new int[2];
@@ -231,7 +264,12 @@ public class Decoder implements FlagVar{
     }
 
 
-
+    /**
+     * decode the id from certain samples. it's the max id of corr*corr/avg(corr).
+     * @auther ruinan jin
+     * @param s
+     * @return
+     */
     public int decodeId(float[] s){
         float[] fft = JniUtils.fft(s,2*LSymbol);
         float[] corr = null;
@@ -250,7 +288,7 @@ public class Decoder implements FlagVar{
     }
 
     /**
-     * decode the anchor ID
+     * decode the anchor ID. the method is abandoned.
      * @param s - the audio samples
      * @param p - the decoded preamble information
      * @param isUpSymbol - indicate whether we use up or down symbol to decode the anchor ID
@@ -304,6 +342,17 @@ public class Decoder implements FlagVar{
             return true;
         }
     }
+
+    /**
+     * calculate the frequency shift of the sin wav.
+     * @auther ruinan jin
+     * @param data samples
+     * @param sinSigFs sin wav frequency
+     * @param len fft length
+     * @param rangeF detect range for each frequency. it should be smaller than the half of the frquency diff.
+     * @param fs sound sampling rate.
+     * @return
+     */
 
     public float getFshift(float[] data, int[] sinSigFs, int len, int rangeF, int fs){
         int a = 1;

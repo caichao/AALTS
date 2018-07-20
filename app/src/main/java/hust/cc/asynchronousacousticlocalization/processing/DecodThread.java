@@ -27,13 +27,14 @@ public class DecodThread extends Decoder implements Runnable{
     private Deque<TDOAUtils> preambleInfoList;
     private int mTDOACounter = 0;
     private Handler mHandler;
+    //list data to store samples from microphone.
     public List<short[]> samplesList;
 
     public short[] testData = new short[4096*3*33];
     public List<Short> testIndex = new LinkedList<>();
     private short testI = 0;
 
-
+    //whether the chirp signal is detected in the last sample's processing.
     private boolean lastDetected = false;
     private boolean upPreambleRecv = false;
     private boolean downPreambleRecv = false;
@@ -67,15 +68,17 @@ public class DecodThread extends Decoder implements Runnable{
 
     }
 
+    /**
+     * data processing method
+     * @auther ruinan jin
+     */
     @Override
     public void run() {
         try {
             while (isThreadRunning) {
-
 //                runByStepOnTightOrthotropic();
 //                runByStepOnLooseOrthotropic();
                 runByStepOnLoose();
-
             }
         }catch (Exception e){
             e.printStackTrace();
@@ -83,20 +86,26 @@ public class DecodThread extends Decoder implements Runnable{
 
     }
 
+    /**
+     * data processing method per sampling
+     * @auther ruinan jin
+     */
     private void runByStepOnLoose(){
         if(samplesList.size() >= 3){
             short[] buffer = new short[processBufferSize+LPreamble+startBeforeMaxCorr];
+            //we use totally the last samples and partly this samples in case the misdetection while the chirp is cut off by the sampling.
             synchronized (samplesList){
                 System.arraycopy(samplesList.get(0),0,buffer,0,processBufferSize);
                 System.arraycopy(samplesList.get(1),0,buffer,processBufferSize,LPreamble+startBeforeMaxCorr);
             }
             mLoopCounter++;
+            //compute the fft of the buffer.
             float[] fft = JniUtils.fft(normalization(buffer),buffer.length+ LPreamble);
-
-            infoUp = getIndexMaxVarInfoFromFDomain(fft,upPreambleFFT);
+            //compute the corr of the buffer and the upPreamble.
             infoUp = getIndexMaxVarInfoFromFDomain(fft,upPreambleFFT);
 
             if(infoUp.isReferenceSignalExist){
+                //we only handle the situations that we didn't got the chirp in the last sample's processing while we get it in this one.
                 if(!upPreambleRecv) {
                     synchronized (samplesList) {
                         System.arraycopy(samplesList.get(0), 0, bufferUp, 0, processBufferSize);
@@ -104,15 +113,16 @@ public class DecodThread extends Decoder implements Runnable{
                         System.arraycopy(samplesList.get(2), 0, bufferUp, processBufferSize * 2, processBufferSize);
                     }
                     beconCnt++;
-
+                    //decode the anchor and the sequence id.
                     ids = decodeAnchorSeqId(bufferUp, infoUp);
 
-
+                    //compute the speed. the speed estimating information is emitting just the same time of the preamble, so we should set buffer like this.
                     short[] bufferSpeed = new short[LPreamble];
                     System.arraycopy(bufferUp,infoUp.index,bufferSpeed,0,LPreamble);
                     processSpeedInformation(bufferSpeed);
-
+                    //send the info to the handler.
                     sendMsg();
+                    //compute the sampling diff between becons.
                     calBeconDiff();
 
 
@@ -151,6 +161,10 @@ public class DecodThread extends Decoder implements Runnable{
         mHandler.sendMessage(msg);
     }
 
+    /**
+     * encode the capture beacon message to json.
+     * @return
+     */
     private String encodeJsonMsg(){
         CapturedBeaconMessage cbMsg = new CapturedBeaconMessage();
         cbMsg.capturedAnchorId = ids[0];
@@ -173,6 +187,10 @@ public class DecodThread extends Decoder implements Runnable{
         return jsonStr;
     }
 
+    /**
+     * compute the sampling diff between becons. it's a debug method.
+     * @return diff
+     */
     private long calBeconDiff(){
         if(cbMsgs.size() < 2){
             return 0;
@@ -189,6 +207,9 @@ public class DecodThread extends Decoder implements Runnable{
         return diff;
     }
 
+    /**
+     * old data processing method per sampling. it's abandoned.
+     */
     private void runByStepOnLooseOrthotropic(){
         if(samplesList.size() >= 3){
             short[] buffer = new short[processBufferSize+LPreamble+startBeforeMaxCorr];
@@ -265,6 +286,9 @@ public class DecodThread extends Decoder implements Runnable{
         }
     }
 
+    /**
+     * old data processing method per sampling. it's abandoned.
+     */
     private void runByStepOnTightOrthotropic(){
         if (samplesList.size() >= 3) {
             Date date1,dateS = new Date();
@@ -371,8 +395,11 @@ public class DecodThread extends Decoder implements Runnable{
         }
     }
 
+
     public void processSpeedInformation(short[] buffer){
+        //calculate the fequency change.
         float fshift = getFshift(normalization(buffer),sinSigF,speedDetectionSigLength,speedDetectionRangeF,Fs);
+        //calculate the speed based on doppler effect.
         float speed = fshift*soundSpeed/Fs;
         BigDecimal b  =   new  BigDecimal(speed);
         this.speed   =  b.setScale(2,  BigDecimal.ROUND_HALF_UP).floatValue();
@@ -382,8 +409,8 @@ public class DecodThread extends Decoder implements Runnable{
         return speed;
     }
 
-    /*
-    obtain TDOA information from the preambleInfoList
+    /**
+     * obtain TDOA information from the preambleInfoList. it's abandoned.
      */
     private int processTDOAInformation(){
         // remove the first anchor information
