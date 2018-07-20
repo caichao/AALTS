@@ -5,6 +5,7 @@ import android.media.AudioRecord;
 import android.media.MediaRecorder;
 import android.os.Process;
 import android.util.Log;
+import java.util.Date;
 
 import java.io.FileNotFoundException;
 
@@ -97,13 +98,13 @@ public class AudioRecorder implements IAudioRecorder{
 
                     short recordBuffer[] = new short[bufferSize];
                     do {
-                        int len = recorder.read(recordBuffer, 0, bufferSize);
-//                        Log.e("","len:"+len+"  bufferSize:"+bufferSize+" signalLen:"+ FlagVar.beconMessageLength);
+                        readFully(recorder,recordBuffer,0,bufferSize);
+//                        int len = recorder.read(recordBuffer, 0, bufferSize);
+//                        System.out.println("bufferSize:"+bufferSize+" recordBuffer.length:"+recordBuffer.length+" val:"+recordBuffer[4097]+" time:"+(new Date().getTime()));
 
-                        if (len > 0) {
-                            recordingCallback.onDataReady(recordBuffer,len/2);
+                        if (bufferSize > 0) {
+                            recordingCallback.onDataReady(recordBuffer,bufferSize/2);
                         } else {
-                            Log.e(AudioRecorder.class.getSimpleName(), "error: " + len);
                             onRecordFailure();
                         }
                     } while (recorderState == RECORDER_STATE_BUSY);
@@ -145,7 +146,7 @@ public class AudioRecorder implements IAudioRecorder{
         int bufferSize = Math.max(BUFFER_BYTES_ELEMENTS * BUFFER_BYTES_PER_ELEMENT,
                 AudioRecord.getMinBufferSize(RECORDER_SAMPLE_RATE, RECORDER_CHANNELS_IN, RECORDER_AUDIO_ENCODING));
 
-        int size = 4096;
+        int size = 8192;
         while(size < bufferSize){
             size = size * 2;
         }
@@ -163,6 +164,15 @@ public class AudioRecorder implements IAudioRecorder{
     public interface RecordingCallback {
         void onDataReady(short[] data, int bytelen);
     }
+
+    private void readFully(AudioRecord recorder,short[] data, int off, int length) {
+        int read;
+        while (length > 0) {
+            read = recorder.read(data, off, length);
+            length -= read;
+            off += read;
+        }
+}
 
 
 }
