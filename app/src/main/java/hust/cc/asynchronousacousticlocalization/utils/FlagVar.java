@@ -50,10 +50,10 @@ public interface FlagVar {
     /*****************************************************/
 
     /***********************threshold parameters*********************/
-    float preambleDetectionThreshold= 0.5f;
+    float corrThreshold= 0.5f;
     int numberOfPreviousSamples = 100;
 //    float ratioThreshold = 15f;
-    //caichao
+    float maxAvgRatioThreshold = 9f;
     float ratioThreshold = 9;
     float ratioAvailableThreshold = 0.4f;
     /*****************************************************/

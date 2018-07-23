@@ -32,7 +32,7 @@ public class DecodThread extends Decoder implements Runnable{
     public List<short[]> samplesList;
 
 
-    public short[] testData = new short[4096*3*100];
+    public short[] testData = new short[4096*4*100];
     public List<Short> testIndex = new LinkedList<>();
     private short testI = 0;
     public int[] testCounters = new int[100];
@@ -66,8 +66,8 @@ public class DecodThread extends Decoder implements Runnable{
      */
     public void fillSamples(short[] s){
 
-        synchronized (unhandledSampleList) {
-            unhandledSampleList.add(s);
+        synchronized (samplesList) {
+            samplesList.add(s);
         }
 
     }
@@ -96,11 +96,9 @@ public class DecodThread extends Decoder implements Runnable{
      */
     private void runByStepOnLoose(){
 
-        pretreatmentData();
+//        pretreatmentData();
         if(samplesList.size() >= 3){
             mLoopCounter++;
-            Date date1 = new Date();
-            System.out.println("time:"+(new Date().getTime())+"  mLoopCounter"+mLoopCounter);
             short[] buffer = new short[processBufferSize+LPreamble+startBeforeMaxCorr];
             //we use totally the last samples and partly this samples in case the misdetection while the chirp is cut off by the sampling.
             synchronized (samplesList){
@@ -133,18 +131,12 @@ public class DecodThread extends Decoder implements Runnable{
                     sendMsg();
                     //compute the sampling diff between becons.
                     calBeconDiff();
-
-
-//                    if(ids[0] !=0 || ids[1] != 2) {
 //                        if (testI < 100) {
-//
-//                            System.arraycopy(bufferUp, 0, testData, processBufferSize * testI * 3, processBufferSize * 3);
+//                            System.arraycopy(bufferUp, 0, testData, processBufferSize * (testI * 4+1), processBufferSize * 3);
 //                            testCounters[testI] = mLoopCounter;
 //
-//                        }
-//
+//                        }//
 //                        testI++;
-//                    }
                 }
                 upPreambleRecv = true;
             }else{
@@ -155,8 +147,6 @@ public class DecodThread extends Decoder implements Runnable{
                 samplesList.remove(0);
             }
 
-            Date date2 = new Date();
-//            soutDateDiff("total",date1,date2);
 
 //            System.out.println("size:"+samplesList.size()+"    mLoopCounter:"+mLoopCounter+"    tdoa:"+tdoa);
         }
@@ -232,7 +222,8 @@ public class DecodThread extends Decoder implements Runnable{
         CapturedBeaconMessage cbMsg2 = cbMsgs.get(cbMsgs.size()-2);
         long index1 = cbMsg1.looperCounter*processBufferSize+cbMsg1.preambleIndex;
         long index2 = cbMsg2.looperCounter*processBufferSize+cbMsg2.preambleIndex;
-        long diff = index1-index2;
+        long diff = index1-index2-19680;
+
         Message msg = new Message();
         msg.what = MESSAGE_DIFF;
         msg.obj = (Long)diff;

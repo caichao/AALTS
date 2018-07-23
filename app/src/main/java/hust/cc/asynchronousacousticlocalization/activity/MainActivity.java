@@ -367,17 +367,17 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
 
 //        long time1 = System.nanoTime();
 
-//        short[] data1 = new short[len];
-//        short[] data2 = new short[len];
-//        for (int i = 0; i < len; i++) {
-//            data1[i] = data[2 * i];
-//            data2[i] = data[2 * i + 1];
-//        }
+        short[] data1 = new short[len];
+        short[] data2 = new short[len];
+        for (int i = 0; i < len; i++) {
+            data1[i] = data[2 * i];
+            data2[i] = data[2 * i + 1];
+        }
 
         if(decodThread.unhandledSampleList.size()<100) {
-            decodThread.fillSamples(data);
+            decodThread.fillSamples(data2);
         }
-//        long time2 = System.nanoTime();
+        long time2 = System.nanoTime();
 //        System.out.println("nano:"+(time2-time1));
 
     }

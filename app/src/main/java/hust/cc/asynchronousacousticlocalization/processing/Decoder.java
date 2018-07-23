@@ -196,7 +196,7 @@ public class Decoder implements FlagVar{
 
         }
         for(int i=startBeforeMaxCorr;i<fitVals.length;i++){
-            fitVals[i] = corr[i]*(startBeforeMaxCorr-endBeforeMaxCorr)/fitVals[i];
+            fitVals[i] = corr[i]*corr[i]*(startBeforeMaxCorr-endBeforeMaxCorr)/fitVals[i];
         }
         return fitVals;
     }
@@ -247,8 +247,9 @@ public class Decoder implements FlagVar{
             we mainly detect the preamble by thersholding the value of the fitVals*log(corr+1) in the fit position. it's tested to be the
         best method considering the fitVals and the corr.
          */
-        float ratio = (float) (indexMaxVarInfo.fitVal*Math.log(corr[indexMaxVarInfo.index]+1));
-        if(corr[indexMaxVarInfo.index] > FlagVar.preambleDetectionThreshold && ratio > rThreshold && isIndexAvailable(indexMaxVarInfo)) {
+        float fitVal = indexMaxVarInfo.fitVal/corr[indexMaxVarInfo.index];
+        float ratio = (float) (fitVal*Math.log(corr[indexMaxVarInfo.index]+1));
+        if(/*corr[indexMaxVarInfo.index] > FlagVar.preambleDetectionThreshold*/ fitVal > maxAvgRatioThreshold && ratio > rThreshold && isIndexAvailable(indexMaxVarInfo)) {
             indexMaxVarInfo.isReferenceSignalExist = true;
         }
         //System.out.println("index:"+indexMaxVarInfo.index+"   ratio:"+ratio+"   maxCorr:"+corr[indexMaxVarInfo.index]);

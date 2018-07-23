@@ -81,6 +81,7 @@ public class AudioRecorder implements IAudioRecorder{
             @SuppressWarnings("ResultOfMethodCallIgnored")
             @Override
             public void runImpl() {
+
                 int bufferSize = getBufferSize();
 
                 AudioRecord recorder = new AudioRecord(MediaRecorder.AudioSource.MIC, RECORDER_SAMPLE_RATE, RECORDER_CHANNELS_IN, RECORDER_AUDIO_ENCODING, bufferSize);
@@ -103,7 +104,6 @@ public class AudioRecorder implements IAudioRecorder{
 //                        System.out.println("bufferSize:"+bufferSize+" recordBuffer.length:"+recordBuffer.length+" val:"+recordBuffer[4097]+" time:"+(new Date().getTime()));
 
                         recordingCallback.onDataReady(recordBuffer,bufferSize/2);
-//                            onRecordFailure();
                     } while (recorderState == RECORDER_STATE_BUSY);
                 } finally {
                     recorder.release();
