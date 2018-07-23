@@ -44,6 +44,7 @@ public class DecodThread extends Decoder implements Runnable{
     IndexMaxVarInfo infoUp;
     IndexMaxVarInfo infoDown;
     private int beconCnt = 0;
+    private int errorCnt = 0;
     private float speed;
     private List<CapturedBeaconMessage> cbMsgs;
     private int[] ids;
@@ -124,6 +125,12 @@ public class DecodThread extends Decoder implements Runnable{
                     beconCnt++;
                     //decode the anchor and the sequence id.
                     ids = decodeAnchorSeqId(bufferUp, infoUp);
+                    if(ids[0] != 0){
+                        errorCnt++;
+                    }
+                    if(ids[1] != 2){
+                        errorCnt++;
+                    }
 
                     //compute the speed. the speed estimating information is emitting just the same time of the preamble, so we should set buffer like this.
                     short[] bufferSpeed = new short[LPreamble];
@@ -180,10 +187,14 @@ public class DecodThread extends Decoder implements Runnable{
 
     public void clear(){
         beconCnt = 0;
+        errorCnt = 0;
     }
 
     public int getBeconCnt(){
         return beconCnt;
+    }
+    public int getErrorCnt() {
+        return errorCnt;
     }
 
     private void sendMsg(){

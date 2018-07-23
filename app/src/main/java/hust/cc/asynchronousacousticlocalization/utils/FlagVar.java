@@ -63,7 +63,7 @@ public interface FlagVar {
     int LPreamble = (int)(new BigDecimal(TPreamble*Fs).setScale(0, BigDecimal.ROUND_HALF_UP).floatValue());
     int LSymbol = (int)(new BigDecimal(TSymbol*Fs).setScale(0, BigDecimal.ROUND_HALF_UP).floatValue());
     int beconMessageLength = (int)(new BigDecimal(beconMessageTime*Fs).setScale(0, BigDecimal.ROUND_HALF_UP).floatValue());
-    int endBeforeMaxCorr = 0;
+    int endBeforeMaxCorr = 0; // tune from 0 - 200;
     int startBeforeMaxCorr = 200;
 
     int [] sinSigF = {17000,17200,17400,17600,17800};
