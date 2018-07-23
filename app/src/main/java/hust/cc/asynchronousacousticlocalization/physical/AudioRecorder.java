@@ -102,11 +102,8 @@ public class AudioRecorder implements IAudioRecorder{
 //                        int len = recorder.read(recordBuffer, 0, bufferSize);
 //                        System.out.println("bufferSize:"+bufferSize+" recordBuffer.length:"+recordBuffer.length+" val:"+recordBuffer[4097]+" time:"+(new Date().getTime()));
 
-                        if (bufferSize > 0) {
-                            recordingCallback.onDataReady(recordBuffer,bufferSize/2);
-                        } else {
-                            onRecordFailure();
-                        }
+                        recordingCallback.onDataReady(recordBuffer,bufferSize/2);
+//                            onRecordFailure();
                     } while (recorderState == RECORDER_STATE_BUSY);
                 } finally {
                     recorder.release();

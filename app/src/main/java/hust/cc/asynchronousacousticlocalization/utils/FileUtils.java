@@ -39,6 +39,29 @@ public class FileUtils {
         }
     }
 
+    public static void saveBytes(int[] bytes, String name){
+        File file = new File(SDPATH+name+".txt");
+        FileWriter fw = null;
+        try {
+            fw = new FileWriter(file);
+            if(!file.exists())
+                file.createNewFile();
+            for(int i = 0; i < bytes.length ; i++){
+                fw.write(String.valueOf(bytes[i]) + "\r\n");
+                fw.flush();
+            }
+        }catch (Exception e){
+            e.printStackTrace();
+        }finally {
+            try {
+                if(fw != null)
+                    fw.close();
+            }catch (Exception e){
+                e.printStackTrace();
+            }
+        }
+    }
+
     public static void saveBytes(float[] bytes, String name){
         File file = new File(SDPATH+name+".txt");
         FileWriter fw = null;

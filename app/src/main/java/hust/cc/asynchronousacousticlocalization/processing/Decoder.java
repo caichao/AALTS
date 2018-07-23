@@ -126,12 +126,23 @@ public class Decoder implements FlagVar{
         }
         //compute the corr
         float[] corr = JniUtils.xcorr(data1,data2);
+
+
+//        IndexMaxVarInfo info = Algorithm.getMaxInfo(corr,0,corr.length-1);
+//        if(info.fitVal>preambleDetectionThreshold){
+//            info.isReferenceSignalExist = true;
+//        }
+//        return info;
+
+
+
         //compute the fit vals
         float[] fitVals = getFitValsFromCorr(corr);
         //get the fit index
         int index = getFitPos(fitVals, corr);
         indexMaxVarInfo.index = index;
         indexMaxVarInfo.fitVal = fitVals[index];
+
         //detect whether the chirp signal exists.
         IndexMaxVarInfo resultInfo = preambleDetection(corr,indexMaxVarInfo);
         return resultInfo;
@@ -237,7 +248,7 @@ public class Decoder implements FlagVar{
         best method considering the fitVals and the corr.
          */
         float ratio = (float) (indexMaxVarInfo.fitVal*Math.log(corr[indexMaxVarInfo.index]+1));
-        if(corr[indexMaxVarInfo.index] > FlagVar.preambleDetectionThreshold && ratio > rThreshold) {
+        if(corr[indexMaxVarInfo.index] > FlagVar.preambleDetectionThreshold && ratio > rThreshold && isIndexAvailable(indexMaxVarInfo)) {
             indexMaxVarInfo.isReferenceSignalExist = true;
         }
         //System.out.println("index:"+indexMaxVarInfo.index+"   ratio:"+ratio+"   maxCorr:"+corr[indexMaxVarInfo.index]);
@@ -338,7 +349,7 @@ public class Decoder implements FlagVar{
 
     public boolean isIndexAvailable(IndexMaxVarInfo indexMaxVarInfo){
         int index = indexMaxVarInfo.index;
-        if(index >= processBufferSize+LPreamble+startBeforeMaxCorr || index < startBeforeMaxCorr){
+        if(index >= processBufferSize+startBeforeMaxCorr || index < startBeforeMaxCorr){
             return false;
         }else{
             return true;

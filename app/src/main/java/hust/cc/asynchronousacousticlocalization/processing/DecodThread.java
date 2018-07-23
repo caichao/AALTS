@@ -28,11 +28,14 @@ public class DecodThread extends Decoder implements Runnable{
     private int mTDOACounter = 0;
     private Handler mHandler;
     //list data to store samples from microphone.
+    public List<short[]> unhandledSampleList;
     public List<short[]> samplesList;
 
-    public short[] testData = new short[4096*3*33];
+
+    public short[] testData = new short[4096*3*100];
     public List<Short> testIndex = new LinkedList<>();
     private short testI = 0;
+    public int[] testCounters = new int[100];
 
     //whether the chirp signal is detected in the last sample's processing.
     private boolean lastDetected = false;
@@ -52,6 +55,7 @@ public class DecodThread extends Decoder implements Runnable{
         mTDOAUtils = new TDOAUtils();
         preambleInfoList = new ArrayDeque<>();
         samplesList = new LinkedList<short[]>();
+        unhandledSampleList = new LinkedList<>();
         cbMsgs = new LinkedList<>();
         this.mHandler = mHandler;
     }
@@ -62,8 +66,8 @@ public class DecodThread extends Decoder implements Runnable{
      */
     public void fillSamples(short[] s){
 
-        synchronized (samplesList) {
-            samplesList.add(s);
+        synchronized (unhandledSampleList) {
+            unhandledSampleList.add(s);
         }
 
     }
@@ -91,14 +95,19 @@ public class DecodThread extends Decoder implements Runnable{
      * @auther ruinan jin
      */
     private void runByStepOnLoose(){
+
+        pretreatmentData();
         if(samplesList.size() >= 3){
+            mLoopCounter++;
+            Date date1 = new Date();
+            System.out.println("time:"+(new Date().getTime())+"  mLoopCounter"+mLoopCounter);
             short[] buffer = new short[processBufferSize+LPreamble+startBeforeMaxCorr];
             //we use totally the last samples and partly this samples in case the misdetection while the chirp is cut off by the sampling.
             synchronized (samplesList){
                 System.arraycopy(samplesList.get(0),0,buffer,0,processBufferSize);
                 System.arraycopy(samplesList.get(1),0,buffer,processBufferSize,LPreamble+startBeforeMaxCorr);
             }
-            mLoopCounter++;
+
             //compute the fft of the buffer.
             float[] fft = JniUtils.fft(normalization(buffer),buffer.length+ LPreamble);
             //compute the corr of the buffer and the upPreamble.
@@ -126,11 +135,16 @@ public class DecodThread extends Decoder implements Runnable{
                     calBeconDiff();
 
 
-
-//                    if(testI<33) {
-//                        System.arraycopy(bufferUp, 0, testData, processBufferSize * testI * 3, processBufferSize*3);
+//                    if(ids[0] !=0 || ids[1] != 2) {
+//                        if (testI < 100) {
+//
+//                            System.arraycopy(bufferUp, 0, testData, processBufferSize * testI * 3, processBufferSize * 3);
+//                            testCounters[testI] = mLoopCounter;
+//
+//                        }
+//
+//                        testI++;
 //                    }
-//                    testI++;
                 }
                 upPreambleRecv = true;
             }else{
@@ -141,7 +155,26 @@ public class DecodThread extends Decoder implements Runnable{
                 samplesList.remove(0);
             }
 
+            Date date2 = new Date();
+//            soutDateDiff("total",date1,date2);
+
 //            System.out.println("size:"+samplesList.size()+"    mLoopCounter:"+mLoopCounter+"    tdoa:"+tdoa);
+        }
+    }
+
+    public void pretreatmentData(){
+        while (unhandledSampleList.size() >0){
+            short[] data = unhandledSampleList.get(0);
+            short[] data1 = new short[data.length/2];
+            short[] data2 = new short[data.length/2];
+            for(int i=0;i<data.length/2;i++){
+                data1[i] = data[2 * i];
+                data2[i] = data[2 * i + 1];
+            }
+            samplesList.add(data2);
+            synchronized (unhandledSampleList){
+                unhandledSampleList.remove(0);
+            }
         }
     }
 

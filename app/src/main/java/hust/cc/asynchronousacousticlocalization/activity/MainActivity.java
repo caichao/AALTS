@@ -41,6 +41,7 @@ import hust.cc.asynchronousacousticlocalization.processing.Decoder;
 import hust.cc.asynchronousacousticlocalization.processing.HampelFilter;
 import hust.cc.asynchronousacousticlocalization.utils.BioClient;
 import hust.cc.asynchronousacousticlocalization.utils.CapturedBeaconMessage;
+import hust.cc.asynchronousacousticlocalization.utils.FileUtils;
 import hust.cc.asynchronousacousticlocalization.utils.FlagVar;
 import hust.cc.asynchronousacousticlocalization.utils.JSONUtils;
 import hust.cc.asynchronousacousticlocalization.utils.JniUtils;
@@ -233,8 +234,9 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
 
 
     private void writeIntoFiles(){
-//        System.out.println("write start");
-//        FileUtils.saveBytes(decodThread.testData, "testData");
+        System.out.println("write start");
+        FileUtils.saveBytes(decodThread.testData, "testData");
+        FileUtils.saveBytes(decodThread.testCounters,"testCounter");
 //        FileUtils.saveBytes(DecodThread.downSymbolSamples[0],"down0");
 //        FileUtils.saveBytes(DecodThread.downSymbolSamples[1],"down1");
 //        FileUtils.saveBytes(DecodThread.downSymbolSamples[2],"down2");
@@ -245,7 +247,7 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
 //        FileUtils.saveBytes(decodThread.testCorr, "testCorr");
 //        System.out.println("write start4");
 //        FileUtils.saveBytes(decodThread.testFitVals, "testFitVals");
-//        System.out.println("write end");
+        System.out.println("write end");
     }
 
     /**
@@ -362,16 +364,21 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
     // here we process the received audio samples
     @Override
     public void onDataReady(short[] data, int len) {
-        short[] data1 = new short[len];
-        short[] data2 = new short[len];
-        for (int i = 0; i < len; i++) {
-            data1[i] = data[2 * i];
-            data2[i] = data[2 * i + 1];
-        }
 
-        if(decodThread.samplesList.size()<300) {
-            decodThread.fillSamples(data2);
+//        long time1 = System.nanoTime();
+
+//        short[] data1 = new short[len];
+//        short[] data2 = new short[len];
+//        for (int i = 0; i < len; i++) {
+//            data1[i] = data[2 * i];
+//            data2[i] = data[2 * i + 1];
+//        }
+
+        if(decodThread.unhandledSampleList.size()<100) {
+            decodThread.fillSamples(data);
         }
+//        long time2 = System.nanoTime();
+//        System.out.println("nano:"+(time2-time1));
 
     }
 
