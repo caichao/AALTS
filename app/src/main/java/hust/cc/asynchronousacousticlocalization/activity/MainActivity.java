@@ -433,6 +433,7 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
                                         "preambleIndex:   %n" +
                                         "looperCounter:   %n" +
                                         "beconCnt:        %n" +
+                                        "errCount:        %n" +
                                         "speed:           ");
                         String showTxt1 = String.format("%d%n" +
                                         "%d%n" +
@@ -440,9 +441,10 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
                                         "%d%n" +
                                         "%d%n" +
                                         "%d%n" +
+                                        "%d%n" +
                                         "%d cm/s",
                                 cbMsg.selfAnchorId, cbMsg.capturedAnchorId, cbMsg.capturedSequence, cbMsg.preambleIndex, cbMsg.looperCounter,
-                                decodThread.getBeconCnt(),(int)cbMsg.speed);
+                                decodThread.getBeconCnt(),decodThread.getErrorCnt(),(int)cbMsg.speed);
                         text.setText(showTxt);
                         text1.setText(showTxt1);
                         break;
