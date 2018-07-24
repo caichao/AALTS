@@ -53,7 +53,7 @@ public interface FlagVar {
     float corrThreshold= 0.5f;
     int numberOfPreviousSamples = 100;
 //    float ratioThreshold = 15f;
-    float maxAvgRatioThreshold = 9f;
+    float maxAvgRatioThreshold = 8f;
     float ratioThreshold = 9;
     float ratioAvailableThreshold = 0.4f;
     /*****************************************************/
