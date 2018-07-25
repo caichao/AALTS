@@ -47,6 +47,8 @@ public class Decoder implements FlagVar{
     public static float marThreshold;
     public static int mUsed;
     public static int pdType;
+    protected float maRatio;
+    protected float ratio;
 
 
     public void initialize(int processBufferSize){
@@ -146,11 +148,11 @@ public class Decoder implements FlagVar{
         }else {
             IndexMaxVarInfo info = Algorithm.getMaxInfo(corr,0,corr.length-1);
             float mean = Algorithm.meanValue(corr,info.index-startBeforeMaxCorr,info.index-endBeforeMaxCorr-1);
-            float fitVal = info.fitVal/mean;
-            System.out.println("index:"+info.index+"   ratio:"+fitVal+"   maxCorr:"+corr[info.index]);
+            maRatio = info.fitVal/mean;
+            System.out.println("index:"+info.index+"   maRatio:"+maRatio+"   maxCorr:"+corr[info.index]);
             if(isIndexAvailable(info)){
 
-                if((fitVal>marThreshold)) {
+                if((maRatio>marThreshold)) {
                     info.isReferenceSignalExist = true;
                 }
             }
@@ -262,17 +264,17 @@ public class Decoder implements FlagVar{
             we mainly detect the preamble by thersholding the value of the fitVals*log(corr+1) in the fit position. it's tested to be the
         best method considering the fitVals and the corr.
          */
-        float fitVal = indexMaxVarInfo.fitVal;
+        maRatio = indexMaxVarInfo.fitVal;
         if(Decoder.pdType == FlagVar.DETECT_TYPE2){
-            fitVal = fitVal/corr[indexMaxVarInfo.index];
+            maRatio = maRatio/corr[indexMaxVarInfo.index];
         }else if(Decoder.pdType == FlagVar.DETECT_TYPE3){
-            fitVal = fitVal/corr[indexMaxVarInfo.index]/corr[indexMaxVarInfo.index];
+            maRatio = maRatio/corr[indexMaxVarInfo.index]/corr[indexMaxVarInfo.index];
         }
-        float ratio = (float) (fitVal*Math.log(corr[indexMaxVarInfo.index]+1));
-        if(fitVal > marThreshold && ratio > rThreshold && isIndexAvailable(indexMaxVarInfo)) {
+        ratio = (float) (maRatio*Math.log(corr[indexMaxVarInfo.index]+1));
+        if(maRatio > marThreshold && ratio > rThreshold && isIndexAvailable(indexMaxVarInfo)) {
             indexMaxVarInfo.isReferenceSignalExist = true;
         }
-        //System.out.println("index:"+indexMaxVarInfo.index+"   ratio:"+ratio+"   maxCorr:"+corr[indexMaxVarInfo.index]);
+        System.out.println("index:"+indexMaxVarInfo.index+"   ratio:"+ratio+"   maRatio:"+maRatio+"  marThreshold:"+marThreshold+"  rThreshold:"+rThreshold);
         return indexMaxVarInfo;
     }
 

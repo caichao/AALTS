@@ -30,6 +30,7 @@ public class DecodThread extends Decoder implements Runnable{
     //list data to store samples from microphone.
     public List<short[]> unhandledSampleList;
     public List<short[]> samplesList;
+    private List<String> ratioStrs;
 
 
     public short[] testData = new short[4096*4*100];
@@ -58,6 +59,7 @@ public class DecodThread extends Decoder implements Runnable{
         samplesList = new LinkedList<short[]>();
         unhandledSampleList = new LinkedList<>();
         cbMsgs = new LinkedList<>();
+        ratioStrs = new LinkedList<>();
         this.mHandler = mHandler;
     }
 
@@ -109,6 +111,7 @@ public class DecodThread extends Decoder implements Runnable{
 
             //compute the fft of the buffer.
             float[] fft = JniUtils.fft(normalization(buffer),buffer.length+ LPreamble);
+//            fft = frequencyFiltering(fft);
             //compute the corr of the buffer and the upPreamble.
             infoUp = getIndexMaxVarInfoFromFDomain(fft,upPreambleFFT);
 
@@ -149,6 +152,7 @@ public class DecodThread extends Decoder implements Runnable{
             }else{
                 upPreambleRecv = false;
             }
+            sendRatio();
 
             synchronized (samplesList){
                 samplesList.remove(0);
@@ -159,7 +163,41 @@ public class DecodThread extends Decoder implements Runnable{
         }
     }
 
-    public void pretreatmentData(){
+    private void sendRatio(){
+        String str = "maRatio:"+maRatio+"  ratio:"+ratio;
+        ratioStrs.add(str);
+        if(ratioStrs.size()>10){
+            ratioStrs.remove(0);
+        }
+        StringBuilder sb = new StringBuilder();
+        for(String s:ratioStrs){
+            sb.append(s).append("\n");
+        }
+
+        Message msg = new Message();
+        msg.what = MESSAGE_RATIO;
+        msg.obj = sb.toString();
+        mHandler.sendMessage(msg);
+    }
+
+    private float[] frequencyFiltering(float [] data){
+        int len = data.length;
+        float[] res = new float[len];
+        int startI = bandPassLow*len/2/Fs;
+        int endI = bandPassHigh*len/2/Fs;
+        for(int i=0;i<res.length/2;i++){
+            if(i <= startI || i >= endI){
+                res[2*i] = 0;
+                res[2*i+1] = 0;
+            }else{
+                res[2*i] = data[2*i];
+                res[2*i+1] = data[2*i+1];
+            }
+        }
+        return res;
+    }
+
+    private void pretreatmentData(){
         while (unhandledSampleList.size() >0){
             short[] data = unhandledSampleList.get(0);
             short[] data1 = new short[data.length/2];
@@ -433,7 +471,7 @@ public class DecodThread extends Decoder implements Runnable{
 
     public void processSpeedInformation(short[] buffer){
         //calculate the fequency change.
-        float fshift = getFshift(normalization(buffer),sinSigF,speedDetectionSigLength,speedDetectionRangeF,Fs);
+        float fshift = 0-getFshift(normalization(buffer),sinSigF,speedDetectionSigLength,speedDetectionRangeF,Fs);
         //calculate the speed based on doppler effect.
         float speed = fshift*soundSpeed/Fs;
         BigDecimal b  =   new  BigDecimal(speed);

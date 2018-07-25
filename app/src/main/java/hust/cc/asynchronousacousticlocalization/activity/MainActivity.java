@@ -71,6 +71,8 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
     EditText editThreshold;
     @BindView(R.id.out_linear)
     LinearLayout outLinear;
+    @BindView(R.id.text3)
+    TextView text3;
 
 
 
@@ -455,6 +457,11 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
                         text1.setText(showTxt1);
                         break;
                     }
+                    case FlagVar.MESSAGE_RATIO:{
+                        String str = (String)msg.obj;
+                        text3.setText(str);
+                        break;
+                    }
                 }
             }catch (Exception e){
                 e.printStackTrace();
@@ -519,7 +526,8 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
         Decoder.rThreshold = data.getIntExtra("ratio",(int)FlagVar.ratioThreshold)*1.0f/10;
         Decoder.marThreshold = data.getIntExtra("maxAvgRatio",(int)FlagVar.maxAvgRatioThreshold)*1.0f/10;;
         Decoder.mUsed = data.getIntExtra("micUsed",FlagVar.micUsed);
-        Decoder.pdType = data.getIntExtra("preambleDetectionType",FlagVar.micUsed);;
+        Decoder.pdType = data.getIntExtra("preambleDetectionType",FlagVar.micUsed);
+        System.out.println("rThreshold:"+Decoder.rThreshold+"  marThreshold:"+Decoder.marThreshold);
         System.out.println(result);
     }
 

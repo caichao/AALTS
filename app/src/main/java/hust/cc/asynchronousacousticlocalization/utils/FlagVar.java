@@ -22,7 +22,7 @@ public interface FlagVar {
 
     // message type constant
     int MESSAGE_TDOA = 50;
-    int MESSAGE_GRAPH = 51;
+    int MESSAGE_RATIO = 51;
     int MESSAGE_DIFF = 52;
     int MESSAGE_JSON = 53;
     //public static final int
@@ -35,6 +35,8 @@ public interface FlagVar {
     int BPreamble = 4000;
     int Fmin = 18000;
     int Fmax = 22000;
+    int bandPassLow = 16000;
+    int bandPassHigh = 23000;
 
     // parameter for the symbols
     float TSymbol = 0.03f;
