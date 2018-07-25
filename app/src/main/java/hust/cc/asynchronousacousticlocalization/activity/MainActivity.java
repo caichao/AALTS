@@ -2,6 +2,7 @@ package hust.cc.asynchronousacousticlocalization.activity;
 
 import android.content.Context;
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.os.Handler;
@@ -12,6 +13,8 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
@@ -23,10 +26,7 @@ import android.widget.Toast;
 
 import com.jjoe64.graphview.series.DataPoint;
 
-import org.jtransforms.fft.FloatFFT_1D;
-
 import java.util.Arrays;
-import java.util.Date;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
@@ -44,7 +44,6 @@ import hust.cc.asynchronousacousticlocalization.utils.CapturedBeaconMessage;
 import hust.cc.asynchronousacousticlocalization.utils.FileUtils;
 import hust.cc.asynchronousacousticlocalization.utils.FlagVar;
 import hust.cc.asynchronousacousticlocalization.utils.JSONUtils;
-import hust.cc.asynchronousacousticlocalization.utils.JniUtils;
 import hust.cc.asynchronousacousticlocalization.utils.RspHandler;
 import hust.cc.asynchronousacousticlocalization.utils.TimeStamp;
 
@@ -90,6 +89,7 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
     private String addrPortStr = "ADDR_PORT";
     private String identityStr = "IDENTITY";
     private String settingStr = "SETTING";
+    private String runningSettingsStr = "RUNNING_SETTINGS";
     //NioClient client = null;
     //RspHandler rspHandler = null;
     private BioClient bioClient = null;
@@ -224,12 +224,13 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
         }catch (Exception e){
             e.printStackTrace();
         }
+        loadSettings();
 
 
-        Log.e(TAG, "socket thread start");
-        playThread = new PlayThread(decodeScheduleMessage);
-        playThread.start();
-        Log.e(TAG, "play thread is listening");
+//        Log.e(TAG, "socket thread start");
+//        playThread = new PlayThread(decodeScheduleMessage);
+//        playThread.start();
+//        Log.e(TAG, "play thread is listening");
     }
 
 
@@ -375,7 +376,12 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
         }
 
         if(decodThread.unhandledSampleList.size()<100) {
-            decodThread.fillSamples(data2);
+            if(Decoder.mUsed == FlagVar.MIC_UP) {
+                decodThread.fillSamples(data2);
+            }else if(Decoder.mUsed == FlagVar.MIC_DOWN){
+                decodThread.fillSamples(data1);
+
+            }
         }
         long time2 = System.nanoTime();
 //        System.out.println("nano:"+(time2-time1));
@@ -483,5 +489,46 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
         return super.onKeyDown(keyCode, event);
     }
 
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.menu,menu); //通过getMenuInflater()方法得到MenuInflater对象，再调用它的inflate()方法就可以给当前活动创建菜单了，第一个参数：用于指定我们通过哪一个资源文件来创建菜单；第二个参数：用于指定我们的菜单项将添加到哪一个Menu对象当中。
+        return true; // true：允许创建的菜单显示出来，false：创建的菜单将无法显示。
+    }
+
+    /**
+     *菜单的点击事件
+     */
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+
+        switch (item.getItemId()){
+            case R.id.id_settings:
+                startActivityForResult(new Intent(MainActivity.this, SettingActivity.class), 1);
+                break;
+            default:
+                break;
+        }
+
+        return true;
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        String result = data.getExtras().getString("result");//得到新Activity 关闭后返回的数据
+        Decoder.rThreshold = data.getIntExtra("ratio",(int)FlagVar.ratioThreshold)*1.0f/10;
+        Decoder.marThreshold = data.getIntExtra("maxAvgRatio",(int)FlagVar.maxAvgRatioThreshold)*1.0f/10;;
+        Decoder.mUsed = data.getIntExtra("micUsed",FlagVar.micUsed);
+        Decoder.pdType = data.getIntExtra("preambleDetectionType",FlagVar.micUsed);;
+        System.out.println(result);
+    }
+
+    private void loadSettings(){
+        SharedPreferences sharedPreferences = getSharedPreferences(runningSettingsStr, Context.MODE_PRIVATE);
+        Decoder.mUsed = sharedPreferences.getInt("micUsed",FlagVar.micUsed);
+        Decoder.pdType = sharedPreferences.getInt("preambleDetectionType",FlagVar.preambleDetectionType);
+        Decoder.marThreshold = sharedPreferences.getInt("maxAvgRatio",(int)(FlagVar.maxAvgRatioThreshold*10));
+        Decoder.rThreshold = sharedPreferences.getInt("ratio",(int)(FlagVar.ratioThreshold*10));
+    }
 
 }

@@ -82,4 +82,15 @@ public interface FlagVar {
     String xStr = "x";
     String yStr = "y";
     String identityStr = "identity";
+
+
+
+    int MIC_UP = 1;
+    int MIC_DOWN = 2;
+    int DETECT_TYPE1 = 1;
+    int DETECT_TYPE2 = 2;
+    int DETECT_TYPE3 = 3;
+    int DETECT_TYPE4 = 4;
+    int micUsed = MIC_UP;
+    int preambleDetectionType = DETECT_TYPE1;
 }

@@ -43,7 +43,11 @@ public class Decoder implements FlagVar{
     protected short[] bufferUp;
     protected short[] bufferDown;
 
-    public static float rThreshold = ratioThreshold;
+    public static float rThreshold;
+    public static float marThreshold;
+    public static int mUsed;
+    public static int pdType;
+
 
     public void initialize(int processBufferSize){
         this.processBufferSize = processBufferSize;
@@ -118,7 +122,7 @@ public class Decoder implements FlagVar{
      */
 
     public IndexMaxVarInfo getIndexMaxVarInfoFromFloats(float[] data1,float[] data2, boolean isFdomain){
-        IndexMaxVarInfo indexMaxVarInfo = new IndexMaxVarInfo();
+
         if(!isFdomain){
             int len = getFFTLen(data1.length,data2.length);
             data1 = JniUtils.fft(data1,len);
@@ -127,25 +131,31 @@ public class Decoder implements FlagVar{
         //compute the corr
         float[] corr = JniUtils.xcorr(data1,data2);
 
+        if(Decoder.pdType >= DETECT_TYPE1 && Decoder.pdType <= DETECT_TYPE3) {
+            IndexMaxVarInfo indexMaxVarInfo = new IndexMaxVarInfo();
+            //compute the fit vals
+            float[] fitVals = getFitValsFromCorr(corr);
+            //get the fit index
+            int index = getFitPos(fitVals, corr);
+            indexMaxVarInfo.index = index;
+            indexMaxVarInfo.fitVal = fitVals[index];
 
-//        IndexMaxVarInfo info = Algorithm.getMaxInfo(corr,0,corr.length-1);
-//        if(info.fitVal>preambleDetectionThreshold){
-//            info.isReferenceSignalExist = true;
-//        }
-//        return info;
+            //detect whether the chirp signal exists.
+            IndexMaxVarInfo resultInfo = preambleDetection(corr, indexMaxVarInfo);
+            return resultInfo;
+        }else {
+            IndexMaxVarInfo info = Algorithm.getMaxInfo(corr,0,corr.length-1);
+            float mean = Algorithm.meanValue(corr,info.index-startBeforeMaxCorr,info.index-endBeforeMaxCorr-1);
+            float fitVal = info.fitVal/mean;
+            System.out.println("index:"+info.index+"   ratio:"+fitVal+"   maxCorr:"+corr[info.index]);
+            if(isIndexAvailable(info)){
 
-
-
-        //compute the fit vals
-        float[] fitVals = getFitValsFromCorr(corr);
-        //get the fit index
-        int index = getFitPos(fitVals, corr);
-        indexMaxVarInfo.index = index;
-        indexMaxVarInfo.fitVal = fitVals[index];
-
-        //detect whether the chirp signal exists.
-        IndexMaxVarInfo resultInfo = preambleDetection(corr,indexMaxVarInfo);
-        return resultInfo;
+                if((fitVal>marThreshold)) {
+                    info.isReferenceSignalExist = true;
+                }
+            }
+            return info;
+        }
     }
 
 
@@ -197,6 +207,11 @@ public class Decoder implements FlagVar{
         }
         for(int i=startBeforeMaxCorr;i<fitVals.length;i++){
             fitVals[i] = corr[i]*(startBeforeMaxCorr-endBeforeMaxCorr)/fitVals[i];
+            if(Decoder.pdType == FlagVar.DETECT_TYPE2){
+                fitVals[i] = fitVals[i]*corr[i];
+            }else if(Decoder.pdType == FlagVar.DETECT_TYPE3){
+                fitVals[i] = fitVals[i]*corr[i]*corr[i];
+            }
         }
         return fitVals;
     }
@@ -248,8 +263,13 @@ public class Decoder implements FlagVar{
         best method considering the fitVals and the corr.
          */
         float fitVal = indexMaxVarInfo.fitVal;
+        if(Decoder.pdType == FlagVar.DETECT_TYPE2){
+            fitVal = fitVal/corr[indexMaxVarInfo.index];
+        }else if(Decoder.pdType == FlagVar.DETECT_TYPE3){
+            fitVal = fitVal/corr[indexMaxVarInfo.index]/corr[indexMaxVarInfo.index];
+        }
         float ratio = (float) (fitVal*Math.log(corr[indexMaxVarInfo.index]+1));
-        if(/*corr[indexMaxVarInfo.index] > FlagVar.preambleDetectionThreshold*/ fitVal > maxAvgRatioThreshold && ratio > rThreshold && isIndexAvailable(indexMaxVarInfo)) {
+        if(fitVal > marThreshold && ratio > rThreshold && isIndexAvailable(indexMaxVarInfo)) {
             indexMaxVarInfo.isReferenceSignalExist = true;
         }
         //System.out.println("index:"+indexMaxVarInfo.index+"   ratio:"+ratio+"   maxCorr:"+corr[indexMaxVarInfo.index]);
