@@ -527,8 +527,8 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
         SharedPreferences sharedPreferences = getSharedPreferences(runningSettingsStr, Context.MODE_PRIVATE);
         Decoder.mUsed = sharedPreferences.getInt("micUsed",FlagVar.micUsed);
         Decoder.pdType = sharedPreferences.getInt("preambleDetectionType",FlagVar.preambleDetectionType);
-        Decoder.marThreshold = sharedPreferences.getInt("maxAvgRatio",(int)(FlagVar.maxAvgRatioThreshold*10));
-        Decoder.rThreshold = sharedPreferences.getInt("ratio",(int)(FlagVar.ratioThreshold*10));
+        Decoder.marThreshold = sharedPreferences.getInt("maxAvgRatio",(int)(FlagVar.maxAvgRatioThreshold*10))*1.0f/10;
+        Decoder.rThreshold = sharedPreferences.getInt("ratio",(int)(FlagVar.ratioThreshold*10))*1.0f/10;
     }
 
 }
