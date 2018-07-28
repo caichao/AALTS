@@ -134,8 +134,8 @@ public class DecodThread extends Decoder implements Runnable{
                     }
 
                     //compute the speed. the speed estimating information is emitting just the same time of the preamble, so we should set buffer like this.
-                    short[] bufferSpeed = new short[LPreamble];
-                    System.arraycopy(bufferUp,infoUp.index,bufferSpeed,0,LPreamble);
+                    short[] bufferSpeed = new short[beconMessageLength];
+                    System.arraycopy(bufferUp,infoUp.index,bufferSpeed,0,beconMessageLength);
                     processSpeedInformation(bufferSpeed);
                     //send the info to the handler.
                     sendMsg();
@@ -471,9 +471,8 @@ public class DecodThread extends Decoder implements Runnable{
 
     public void processSpeedInformation(short[] buffer){
         //calculate the fequency change.
-        float fshift = 0-getFshift(normalization(buffer),sinSigF,speedDetectionSigLength,speedDetectionRangeF,Fs);
+        speed = 0- estimateSpeed(normalization(buffer),sinSigF,speedDetectionSigLength,speedDetectionRangeF,Fs,soundSpeed);
         //calculate the speed based on doppler effect.
-        float speed = fshift*soundSpeed/Fs;
         BigDecimal b  =   new  BigDecimal(speed);
         this.speed   =  b.setScale(2,  BigDecimal.ROUND_HALF_UP).floatValue();
     }

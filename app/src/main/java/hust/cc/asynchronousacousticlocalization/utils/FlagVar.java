@@ -61,14 +61,15 @@ public interface FlagVar {
     /*****************************************************/
 
     //becon message
-    float beconMessageTime = TPreamble+guardInterval+TSymbol;
+    float beconMessageTime = TPreamble+2*guardInterval+2*TSymbol;
     int LPreamble = (int)(new BigDecimal(TPreamble*Fs).setScale(0, BigDecimal.ROUND_HALF_UP).floatValue());
     int LSymbol = (int)(new BigDecimal(TSymbol*Fs).setScale(0, BigDecimal.ROUND_HALF_UP).floatValue());
     int beconMessageLength = (int)(new BigDecimal(beconMessageTime*Fs).setScale(0, BigDecimal.ROUND_HALF_UP).floatValue());
     int endBeforeMaxCorr = 0; // tune from 0 - 200;
     int startBeforeMaxCorr = 200;
 
-    int [] sinSigF = {17000,17200,17400,17600,17800};
+//    int [] sinSigF = {17000,17200,17400,17600,17800};
+    int [] sinSigF = {17000,17100,17200,17300,17400,17500,17600,17700,17800,17900};
     int speedDetectionSigLength = 65536;
     int speedDetectionRangeF = 40;
     int soundSpeed = 34000;

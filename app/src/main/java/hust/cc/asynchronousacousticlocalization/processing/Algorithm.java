@@ -118,4 +118,30 @@ public class Algorithm {
         }
 
     }
+
+    public static int partition(float[] arr,int low,int high){
+        float temp=arr[low];
+        while(low<high){
+            while(arr[high]<=temp&&high>low)
+                --high;
+            arr[low]=arr[high];
+            while(arr[low]>=temp&&low<high)
+                ++low;
+            arr[high]=arr[low];
+        }
+        arr[high]=temp;
+        return high;
+    }
+    public static float find_k(int k,float[] arr,int low,int high){
+        int temp=partition(arr,low,high);
+        if(temp==k-1){
+//            System.out.print("第"+k+"大的数是："+arr[temp]);
+            return arr[temp];
+
+        }else if(temp>k-1){
+            return find_k(k,arr,low,temp-1);
+        }else{
+            return find_k(k-temp,arr,temp+1,high);
+        }
+    }
 }

@@ -377,7 +377,7 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
             data2[i] = data[2 * i + 1];
         }
 
-        if(decodThread.unhandledSampleList.size()<100) {
+        if(decodThread.samplesList.size()<100) {
             if(Decoder.mUsed == FlagVar.MIC_UP) {
                 decodThread.fillSamples(data2);
             }else if(Decoder.mUsed == FlagVar.MIC_DOWN){

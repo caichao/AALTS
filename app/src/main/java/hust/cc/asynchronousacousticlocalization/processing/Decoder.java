@@ -1,5 +1,7 @@
 package hust.cc.asynchronousacousticlocalization.processing;
 
+import android.os.Message;
+
 import org.jtransforms.fft.FloatFFT_1D;
 
 import java.util.LinkedList;
@@ -390,7 +392,7 @@ public class Decoder implements FlagVar{
      * @return
      */
 
-    public float getFshift(float[] data, int[] sinSigFs, int len, int rangeF, int fs){
+    public float estimateSpeed(float[] data, int[] sinSigFs, int len, int rangeF, int fs, int soundSpeed){
         int a = 1;
         while (a < len){
             a = a*2;
@@ -411,6 +413,7 @@ public class Decoder implements FlagVar{
         for(int i=0;i<absfft.length;i++){
             absfft[i] = Math.abs(fft[2*i]*fft[2*i]+fft[2*i+1]*fft[2*i+1]);
         }
+
         List<int[]> detectIntervals = new LinkedList<int[]>();
         for(int i=0;i<sinSigFs.length;i++){
             detectIntervals.add(getDetectInterval(len,fs,rangeF,sinSigFs[i]));
@@ -421,23 +424,39 @@ public class Decoder implements FlagVar{
             }
         }
         float[] detectFs = new float[sinSigFs.length];
+        float[] freqMaxs = new float[sinSigFs.length];
         for(int i=0;i<detectFs.length;i++){
             IndexMaxVarInfo info = Algorithm.getMaxInfo(absfft,detectIntervals.get(i)[0],detectIntervals.get(i)[1]);
             detectFs[i] = 1.0f*info.index*fs/len;
+            freqMaxs[i] = info.fitVal;
         }
-        return fShiftCalculate(sinSigFs,detectFs);
+        float[] diffFs = fShiftCalculate(sinSigFs,detectFs);
+
+//        float[] diffFs2 = new float[diffFs.length];
+//        System.arraycopy(diffFs,0,diffFs2,0,diffFs2.length);
+//        float fShift = Algorithm.find_k((sinSigFs.length+1)/2,diffFs2,0,diffFs2.length-1);
+
+        float[] speeds = getSpeeds(sinSigFs,diffFs,soundSpeed);
+
+        boolean[] isValid = getValids(speeds,freqMaxs);
+
+
+
+//        float[] speeds3;
+//        speeds3 = getValidSpeeds(speeds2, freqMaxs);
+//        return Algorithm.find_k((speeds3.length+1)/2,speeds3,0,speeds3.length-1);
+        return getSpeed(speeds,isValid);
     }
 
-    public float fShiftCalculate(int[] sinSigFs, float[] detectFs){
+    public float[] fShiftCalculate(int[] sinSigFs, float[] detectFs){
         if(sinSigFs.length != detectFs.length){
             throw new RuntimeException("sinSigFs should have the same size of detectFs");
         }
-        float fShift = 0;
+        float[] diffFs = new float[sinSigFs.length];
         for(int i=0;i<sinSigFs.length;i++){
-            fShift += sinSigFs[i]-detectFs[i];
+            diffFs[i] = sinSigFs[i]-detectFs[i];
         }
-        fShift /= sinSigFs.length;
-        return  fShift;
+        return  diffFs;
 
     }
 
@@ -448,6 +467,100 @@ public class Decoder implements FlagVar{
         interval[0] = (sinSigF-detectRangeF)*len/fs;
         interval[1] = (sinSigF+detectRangeF)*len/fs;
         return interval;
+    }
+
+    private boolean[] getValids(float[] speeds,float[] freqMaxs){
+        if(speeds.length != freqMaxs.length){
+            throw new RuntimeException("speeds should have the same size of freqMaxs");
+        }
+        int[] fitCnts = new int[speeds.length];
+        boolean[] isValid = new boolean[speeds.length];
+        boolean[] isValid2 = new boolean[speeds.length];
+        for(int i=0;i<speeds.length;i++){
+            float val = speeds[i];
+            int cnt = 0;
+            for(int j=0;j<speeds.length;j++){
+                float diff = Math.abs(speeds[i]-speeds[j]);
+                if(diff < 5f){
+                    cnt++;
+                }
+            }
+            fitCnts[i] = cnt;
+//            if(cnt >= threshold){
+//                isValid[i] = true;
+//            }
+        }
+
+        float maxmax = Algorithm.getMaxInfo(freqMaxs,0,freqMaxs.length-1).fitVal;
+        for (int j = 0; j < freqMaxs.length; j++) {
+            if (freqMaxs[j] >= maxmax * 0.2) {
+                isValid2[j] = true;
+            } else {
+                isValid2[j] = false;
+            }
+
+        }
+
+        for(int i=(speeds.length)/2;i>=1;i--) {
+            int trueCnt = 0;
+            for(int j=0;j<fitCnts.length;j++){
+                if(fitCnts[j] >= i){
+                    isValid[j] = true && isValid2[j];
+                }else{
+                    isValid[j] = false && isValid2[j];
+                }
+                if(isValid[j]){
+                    trueCnt++;
+                }
+            }
+            if(trueCnt > 0){
+                break;
+            }
+        }
+        return isValid;
+
+    }
+
+    private float getSpeed(float[] speeds, boolean[] isValid){
+
+        if(speeds.length != isValid.length){
+            throw new RuntimeException("speeds should have the same size of isValid");
+        }
+        float[] bufSpeeds = new float[speeds.length];
+        int j=0;
+        for(int i=0;i<speeds.length;i++){
+            if(isValid[i] == true){
+                bufSpeeds[j] = speeds[i];
+                j++;
+            }
+        }
+        float[] resSpeeds = new float[j];
+        System.arraycopy(bufSpeeds,0,resSpeeds,0,j);
+        float speed = Algorithm.find_k((resSpeeds.length+1)/2,resSpeeds,0,resSpeeds.length-1);
+//        float speed = 0;
+//        int cnt = 0;
+//        for (int i=0;i<speeds.length;i++){
+//            if(isValid[i] == true){
+//                speed += speeds[i];
+//                cnt++;
+//            }
+//        }
+//        speed /= cnt;
+        return speed;
+
+    }
+
+    private float[] getSpeeds(int[] sinSigFs,float[] diffFs,int soundSpeed){
+
+        if(sinSigFs.length != diffFs.length){
+            throw new RuntimeException("sinSigFs should have the same size of diffFs");
+        }
+        float[] speeds = new float[sinSigFs.length];
+        for(int i=0;i<sinSigFs.length;i++){
+            speeds[i] = diffFs[i]*soundSpeed/sinSigFs[i];
+        }
+        return speeds;
+
     }
 
 
