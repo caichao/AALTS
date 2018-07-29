@@ -79,7 +79,8 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:gravity="center">
+        android:gravity="center"
+        android:id="@+id/json_linear">
         <TextView
             android:id="@+id/text"
             android:layout_width="wrap_content"
@@ -111,6 +112,11 @@
         android:layout_height="wrap_content"
         android:text=""
         android:visibility="gone"/>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/text4"/>
 
 
 </LinearLayout>

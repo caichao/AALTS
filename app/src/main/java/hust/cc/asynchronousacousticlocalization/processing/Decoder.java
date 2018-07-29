@@ -10,6 +10,7 @@ import java.util.List;
 import hust.cc.asynchronousacousticlocalization.physical.SignalGenerator;
 import hust.cc.asynchronousacousticlocalization.utils.FlagVar;
 import hust.cc.asynchronousacousticlocalization.utils.JniUtils;
+import hust.cc.asynchronousacousticlocalization.utils.SpeedInfo;
 
 import static android.icu.lang.UCharacter.GraphemeClusterBreak.L;
 
@@ -393,7 +394,7 @@ public class Decoder implements FlagVar{
      * @return
      */
 
-    public float estimateSpeed(float[] data, int[] sinSigFs, int len, int rangeF, int fs, int soundSpeed){
+    public SpeedInfo estimateSpeed(float[] data, int[] sinSigFs, int len, int rangeF, int fs, int soundSpeed){
         int a = 1;
         while (a < len){
             a = a*2;
@@ -410,6 +411,7 @@ public class Decoder implements FlagVar{
         }
         float[] fft = JniUtils.fft(data,len);
 
+        SpeedInfo speedInfo = new SpeedInfo();
         float[] absfft = new float[fft.length/2];
         for(int i=0;i<absfft.length;i++){
             absfft[i] = Math.abs(fft[2*i]*fft[2*i]+fft[2*i+1]*fft[2*i+1]);
@@ -431,22 +433,18 @@ public class Decoder implements FlagVar{
             detectFs[i] = 1.0f*info.index*fs/len;
             freqMaxs[i] = info.fitVal;
         }
+        speedInfo.freqMaxs = freqMaxs;
         float[] diffFs = fShiftCalculate(sinSigFs,detectFs);
-
-//        float[] diffFs2 = new float[diffFs.length];
-//        System.arraycopy(diffFs,0,diffFs2,0,diffFs2.length);
-//        float fShift = Algorithm.find_k((sinSigFs.length+1)/2,diffFs2,0,diffFs2.length-1);
-
         float[] speeds = getSpeeds(sinSigFs,diffFs,soundSpeed);
-
+        speedInfo.speeds = speeds;
         boolean[] isValid = getValids(speeds,freqMaxs);
+        speedInfo.isValid = isValid;
 
+        float[] validSpeeds = getValidSpeeds(speeds,isValid);
+        speedInfo.validSpeeds = validSpeeds;
+        speedInfo.speed = speedInfo.validSpeeds[speedInfo.validSpeeds.length/2];
 
-
-//        float[] speeds3;
-//        speeds3 = getValidSpeeds(speeds2, freqMaxs);
-//        return Algorithm.find_k((speeds3.length+1)/2,speeds3,0,speeds3.length-1);
-        return getSpeed(speeds,isValid);
+        return speedInfo;
     }
 
     public float[] fShiftCalculate(int[] sinSigFs, float[] detectFs){
@@ -527,7 +525,7 @@ public class Decoder implements FlagVar{
 
     }
 
-    private float getSpeed(float[] speeds, boolean[] isValid){
+    private float[] getValidSpeeds(float[] speeds, boolean[] isValid){
 
         if(speeds.length != isValid.length){
             throw new RuntimeException("speeds should have the same size of isValid");
@@ -543,7 +541,7 @@ public class Decoder implements FlagVar{
         float[] resSpeeds = new float[j];
         System.arraycopy(bufSpeeds,0,resSpeeds,0,j);
         Algorithm.quickSort(resSpeeds,0,resSpeeds.length-1);
-        return resSpeeds[resSpeeds.length/2];
+        return resSpeeds;
 
     }
 

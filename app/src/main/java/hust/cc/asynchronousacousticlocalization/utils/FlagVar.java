@@ -25,6 +25,7 @@ public interface FlagVar {
     int MESSAGE_RATIO = 51;
     int MESSAGE_DIFF = 52;
     int MESSAGE_JSON = 53;
+    int MESSAGE_SPEED = 54;
     //public static final int
 
     /*****************************************************/

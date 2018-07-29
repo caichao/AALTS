@@ -26,7 +26,10 @@ import android.widget.Toast;
 
 import com.jjoe64.graphview.series.DataPoint;
 
+import java.text.DecimalFormat;
 import java.util.Arrays;
+import java.util.LinkedList;
+import java.util.List;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
@@ -45,6 +48,7 @@ import hust.cc.asynchronousacousticlocalization.utils.FileUtils;
 import hust.cc.asynchronousacousticlocalization.utils.FlagVar;
 import hust.cc.asynchronousacousticlocalization.utils.JSONUtils;
 import hust.cc.asynchronousacousticlocalization.utils.RspHandler;
+import hust.cc.asynchronousacousticlocalization.utils.SpeedInfo;
 import hust.cc.asynchronousacousticlocalization.utils.TimeStamp;
 
 public class MainActivity extends AppCompatActivity implements AudioRecorder.RecordingCallback,RspHandler.Callback{
@@ -73,6 +77,10 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
     LinearLayout outLinear;
     @BindView(R.id.text3)
     TextView text3;
+    @BindView(R.id.text4)
+    TextView text4;
+    @BindView(R.id.json_linear)
+    LinearLayout jsonLinear;
 
 
 
@@ -95,8 +103,12 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
     //NioClient client = null;
     //RspHandler rspHandler = null;
     private BioClient bioClient = null;
+    private List<SpeedInfo> speedInfos;
+    private int text4ShowMode = 0;
 
-    String testCaptureBeaconMessage = "";
+    private String testCaptureBeaconMessage = "";
+
+    private DecimalFormat decimalFormat = new DecimalFormat("##0.0");
     //public static int targetId =
 
 
@@ -144,6 +156,7 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
 
     private void initParams(){
 
+        speedInfos = new LinkedList<>();
         decodThread = new DecodThread(myHandler);
         decodThread.initialize(AudioRecorder.getBufferSize()/2);
         new Thread(decodThread).start();
@@ -222,6 +235,31 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
 
             }
         });
+
+        text4.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                switch (text4ShowMode){
+                    case 0:{
+                        jsonLinear.setVisibility(View.GONE);
+                        text4ShowMode = 1;
+                        text4.setText(SpeedInfos2DetailStr(speedInfos,false));
+                        break;
+                    }
+                    case 1:{
+                        text4ShowMode = 2;
+                        text4.setText(SpeedInfos2DetailStr(speedInfos,true));
+                        break;
+                    }
+                    case 2:{
+                        jsonLinear.setVisibility(View.VISIBLE);
+                        text4ShowMode = 0;
+                        text4.setText(SpeedInfos2BriefStr(speedInfos));
+                        break;
+                    }
+                }
+            }
+        });
         loadSettings();
 
 
@@ -285,7 +323,7 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
     @OnClick(R.id.button_setting)
     void onSettingButtonClicked(){
         settingDialog();
-        settingButton.setVisibility(View.INVISIBLE);
+        settingButton.setVisibility(View.GONE);
 
     }
 
@@ -458,6 +496,29 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
                         text3.setText(str);
                         break;
                     }
+                    case FlagVar.MESSAGE_SPEED:{
+                        SpeedInfo info = (SpeedInfo)msg.obj;
+                        speedInfos.add(info);
+                        while (speedInfos.size() > 13){
+                            speedInfos.remove(0);
+                        }
+                        switch (text4ShowMode){
+                            case 0:{
+                                text4.setText(SpeedInfos2BriefStr(speedInfos));
+                                break;
+                            }
+                            case 1:{
+                                text4.setText(SpeedInfos2DetailStr(speedInfos,false));
+                                break;
+                            }
+                            case 2:{
+                                text4.setText(SpeedInfos2DetailStr(speedInfos,true));
+                                break;
+                            }
+                        }
+
+                        break;
+                    }
                 }
             }catch (Exception e){
                 e.printStackTrace();
@@ -465,6 +526,48 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
         }
 
     };
+
+    private String SpeedInfos2BriefStr(List<SpeedInfo> infos){
+        SpeedInfo info = infos.get(infos.size()-1);
+        return SpeedInfo2Str(info,false);
+
+    }
+
+    private String SpeedInfos2DetailStr(List<SpeedInfo> infos, boolean isValid){
+        StringBuilder sb = new StringBuilder();
+        for(SpeedInfo info:infos){
+            sb.append(SpeedInfo2Str(info,isValid)).append("\n");
+        }
+        return sb.toString();
+    }
+
+
+    private String SpeedInfo2Str(SpeedInfo info, boolean isValid){
+        StringBuilder sb = new StringBuilder();
+        if(isValid == false) {
+            for (int i = 0; i < info.speeds.length; i++) {
+                String str = decimalFormat.format(info.speeds[i]);
+                sb.append("   \t").append(str);
+
+                if (info.isValid[i] == true) {
+                    sb.append(" (y)");
+                } else {
+                    sb.append(" (n)");
+                }
+
+            }
+        }else{
+            for (int i = 0; i < info.validSpeeds.length; i++) {
+                String str = decimalFormat.format(info.validSpeeds[i]);
+                sb.append("   \t").append(str);
+            }
+        }
+
+        String str = decimalFormat.format(info.speed);
+        sb.append("   \t:").append(str);
+        return sb.toString();
+    }
+
 
     public DataPoint[] getPoints(float[] data){
         DataPoint[] values = new DataPoint[data.length];

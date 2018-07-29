@@ -16,6 +16,7 @@ import hust.cc.asynchronousacousticlocalization.utils.CapturedBeaconMessage;
 import hust.cc.asynchronousacousticlocalization.utils.FlagVar;
 import hust.cc.asynchronousacousticlocalization.utils.JSONUtils;
 import hust.cc.asynchronousacousticlocalization.utils.JniUtils;
+import hust.cc.asynchronousacousticlocalization.utils.SpeedInfo;
 
 public class DecodThread extends Decoder implements Runnable{
 
@@ -478,12 +479,17 @@ public class DecodThread extends Decoder implements Runnable{
 
 
     public void processSpeedInformation(short[] buffer){
-        //calculate the fequency change.
-        speed = 0- estimateSpeed(normalization(buffer),sinSigF,speedDetectionSigLength,speedDetectionRangeF,Fs,soundSpeed);
-        speed = speed-sOffset;
         //calculate the speed based on doppler effect.
-        BigDecimal b  =   new  BigDecimal(speed);
-        this.speed   =  b.setScale(2,  BigDecimal.ROUND_HALF_UP).floatValue();
+        SpeedInfo info = estimateSpeed(normalization(buffer),sinSigF,speedDetectionSigLength,speedDetectionRangeF,Fs,soundSpeed);
+        speed = 0-info.speed;
+        speed = speed-sOffset;
+
+        Message msg = new Message();
+        msg.what = MESSAGE_SPEED;
+        msg.obj = info;
+        mHandler.sendMessage(msg);
+
+
     }
 
     public float getSpeed(){
