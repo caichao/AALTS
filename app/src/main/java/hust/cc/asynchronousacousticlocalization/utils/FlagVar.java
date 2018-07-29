@@ -94,6 +94,7 @@ public interface FlagVar {
     int DETECT_TYPE2 = 2;
     int DETECT_TYPE3 = 3;
     int DETECT_TYPE4 = 4;
+    int speedOffset = 0;
     int micUsed = MIC_UP;
     int preambleDetectionType = DETECT_TYPE1;
 }

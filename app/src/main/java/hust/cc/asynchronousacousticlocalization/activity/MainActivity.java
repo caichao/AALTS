@@ -196,36 +196,32 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
         decodeScheduleMessage = DecodeScheduleMessage.getInstance();
         decodeScheduleMessage.start();
         Log.e(TAG, "decodeSchedule thread started");
-        try {
-            editThreshold.setText(Float.toString(Decoder.rThreshold));
-            editThreshold.setOnFocusChangeListener(new View.OnFocusChangeListener() {
-                @Override
-                public void onFocusChange(View v, boolean hasFocus) {
-                    float val = Float.parseFloat(editThreshold.getText().toString());
-                    if(hasFocus == false){
-                        Decoder.rThreshold = val;
-                    }
-
+        editThreshold.setText(Float.toString(Decoder.rThreshold));
+        editThreshold.setOnFocusChangeListener(new View.OnFocusChangeListener() {
+            @Override
+            public void onFocusChange(View v, boolean hasFocus) {
+                float val = Float.parseFloat(editThreshold.getText().toString());
+                if(hasFocus == false){
+                    Decoder.rThreshold = val;
                 }
-            });
+
+            }
+        });
 
 
-            outLinear.setOnTouchListener(new View.OnTouchListener() {
-                @Override
-                public boolean onTouch(View view, MotionEvent motionEvent) {
-                    outLinear.setFocusable(true);
-                    outLinear.setFocusableInTouchMode(true);
-                    outLinear.requestFocus();
-                    InputMethodManager imm = (InputMethodManager) MainActivity.this
-                            .getSystemService(Context.INPUT_METHOD_SERVICE);
-                    imm.hideSoftInputFromWindow(view.getWindowToken(), 0);
-                    return false;
+        outLinear.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View view, MotionEvent motionEvent) {
+                outLinear.setFocusable(true);
+                outLinear.setFocusableInTouchMode(true);
+                outLinear.requestFocus();
+                InputMethodManager imm = (InputMethodManager) MainActivity.this
+                        .getSystemService(Context.INPUT_METHOD_SERVICE);
+                imm.hideSoftInputFromWindow(view.getWindowToken(), 0);
+                return false;
 
-                }
-            });
-        }catch (Exception e){
-            e.printStackTrace();
-        }
+            }
+        });
         loadSettings();
 
 
@@ -527,6 +523,7 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
         Decoder.marThreshold = data.getIntExtra("maxAvgRatio",(int)FlagVar.maxAvgRatioThreshold)*1.0f/10;;
         Decoder.mUsed = data.getIntExtra("micUsed",FlagVar.micUsed);
         Decoder.pdType = data.getIntExtra("preambleDetectionType",FlagVar.micUsed);
+        Decoder.sOffset = data.getIntExtra("speedOffset",FlagVar.speedOffset);
         System.out.println("rThreshold:"+Decoder.rThreshold+"  marThreshold:"+Decoder.marThreshold);
         System.out.println(result);
     }
@@ -537,6 +534,7 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
         Decoder.pdType = sharedPreferences.getInt("preambleDetectionType",FlagVar.preambleDetectionType);
         Decoder.marThreshold = sharedPreferences.getInt("maxAvgRatio",(int)(FlagVar.maxAvgRatioThreshold*10))*1.0f/10;
         Decoder.rThreshold = sharedPreferences.getInt("ratio",(int)(FlagVar.ratioThreshold*10))*1.0f/10;
+        Decoder.sOffset = sharedPreferences.getInt("speedOffset",FlagVar.speedOffset);
     }
 
 }

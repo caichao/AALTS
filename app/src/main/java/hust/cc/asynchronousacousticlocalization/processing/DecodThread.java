@@ -2,6 +2,7 @@ package hust.cc.asynchronousacousticlocalization.processing;
 
 import android.os.Handler;
 import android.os.Message;
+import android.provider.ContactsContract;
 
 import java.math.BigDecimal;
 import java.util.ArrayDeque;
@@ -101,6 +102,7 @@ public class DecodThread extends Decoder implements Runnable{
 
 //        pretreatmentData();
         if(samplesList.size() >= 3){
+            Date date1 = new Date();
             mLoopCounter++;
             short[] buffer = new short[processBufferSize+LPreamble+startBeforeMaxCorr];
             //we use totally the last samples and partly this samples in case the misdetection while the chirp is cut off by the sampling.
@@ -136,7 +138,10 @@ public class DecodThread extends Decoder implements Runnable{
                     //compute the speed. the speed estimating information is emitting just the same time of the preamble, so we should set buffer like this.
                     short[] bufferSpeed = new short[beconMessageLength];
                     System.arraycopy(bufferUp,infoUp.index,bufferSpeed,0,beconMessageLength);
+                    Date date3 = new Date();
                     processSpeedInformation(bufferSpeed);
+                    Date date4 = new Date();
+                    soutDateDiff("processSpeedInformation",date3,date4);
                     //send the info to the handler.
                     sendMsg();
                     //compute the sampling diff between becons.
@@ -157,6 +162,9 @@ public class DecodThread extends Decoder implements Runnable{
             synchronized (samplesList){
                 samplesList.remove(0);
             }
+
+            Date date2 = new Date();
+            soutDateDiff("process time",date1,date2);
 
 
 //            System.out.println("size:"+samplesList.size()+"    mLoopCounter:"+mLoopCounter+"    tdoa:"+tdoa);
@@ -472,6 +480,7 @@ public class DecodThread extends Decoder implements Runnable{
     public void processSpeedInformation(short[] buffer){
         //calculate the fequency change.
         speed = 0- estimateSpeed(normalization(buffer),sinSigF,speedDetectionSigLength,speedDetectionRangeF,Fs,soundSpeed);
+        speed = speed-sOffset;
         //calculate the speed based on doppler effect.
         BigDecimal b  =   new  BigDecimal(speed);
         this.speed   =  b.setScale(2,  BigDecimal.ROUND_HALF_UP).floatValue();

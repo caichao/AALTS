@@ -49,6 +49,7 @@ public class Decoder implements FlagVar{
     public static float marThreshold;
     public static int mUsed;
     public static int pdType;
+    public static int sOffset;
     protected float maRatio;
     protected float ratio;
 

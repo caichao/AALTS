@@ -2,7 +2,8 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical">
+    android:orientation="vertical"
+    android:id="@+id/setting_linear">
 
     <TextView
         android:layout_width="wrap_content"
@@ -107,6 +108,27 @@
             android:text="max"
             android:id="@+id/detect4"/>
     </RadioGroup>
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="18dp"
+            android:text="speed offset:"/>
+
+        <EditText
+            android:layout_width="80dp"
+            android:layout_height="wrap_content"
+            android:id="@+id/speed_offset"
+            android:textSize="18dp"
+            android:inputType="number"
+            />
+
+    </LinearLayout>
 
     <Button
         android:layout_width="wrap_content"
