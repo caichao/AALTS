@@ -542,17 +542,8 @@ public class Decoder implements FlagVar{
         }
         float[] resSpeeds = new float[j];
         System.arraycopy(bufSpeeds,0,resSpeeds,0,j);
-        float speed = Algorithm.find_k((resSpeeds.length+1)/2,resSpeeds,0,resSpeeds.length-1);
-//        float speed = 0;
-//        int cnt = 0;
-//        for (int i=0;i<speeds.length;i++){
-//            if(isValid[i] == true){
-//                speed += speeds[i];
-//                cnt++;
-//            }
-//        }
-//        speed /= cnt;
-        return speed;
+        Algorithm.quickSort(resSpeeds,0,resSpeeds.length-1);
+        return resSpeeds[resSpeeds.length/2];
 
     }
 
