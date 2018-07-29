@@ -470,18 +470,31 @@ public class Decoder implements FlagVar{
     }
 
     private boolean[] getValids(float[] speeds,float[] freqMaxs){
+
         if(speeds.length != freqMaxs.length){
             throw new RuntimeException("speeds should have the same size of freqMaxs");
         }
         int[] fitCnts = new int[speeds.length];
         boolean[] isValid = new boolean[speeds.length];
         boolean[] isValid2 = new boolean[speeds.length];
+        float maxmax = Algorithm.getMaxInfo(freqMaxs,0,freqMaxs.length-1).fitVal;
+        float mean = Algorithm.meanValue(freqMaxs,0,freqMaxs.length-1);
+        for (int j = 0; j < freqMaxs.length; j++) {
+//            if (freqMaxs[j] >= maxmax * 0.2) {
+            if (freqMaxs[j] >= mean * 0.3) {
+                isValid2[j] = true;
+            } else {
+                isValid2[j] = false;
+            }
+
+        }
+
         for(int i=0;i<speeds.length;i++){
             float val = speeds[i];
             int cnt = 0;
             for(int j=0;j<speeds.length;j++){
                 float diff = Math.abs(speeds[i]-speeds[j]);
-                if(diff < 5f){
+                if(diff < 7f  && isValid2[j]){
                     cnt++;
                 }
             }
@@ -491,15 +504,7 @@ public class Decoder implements FlagVar{
 //            }
         }
 
-        float maxmax = Algorithm.getMaxInfo(freqMaxs,0,freqMaxs.length-1).fitVal;
-        for (int j = 0; j < freqMaxs.length; j++) {
-            if (freqMaxs[j] >= maxmax * 0.2) {
-                isValid2[j] = true;
-            } else {
-                isValid2[j] = false;
-            }
 
-        }
 
         for(int i=(speeds.length)/2;i>=1;i--) {
             int trueCnt = 0;
