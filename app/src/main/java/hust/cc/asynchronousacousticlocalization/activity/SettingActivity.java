@@ -12,6 +12,7 @@ import android.widget.ProgressBar;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.SeekBar;
+import android.widget.TextView;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
@@ -24,8 +25,12 @@ public class SettingActivity extends AppCompatActivity{
     RadioGroup micGroup;
     @BindView(R.id.max_avg_bar)
     SeekBar maxAvgRatioBar;
+    @BindView(R.id.mar_ratio_txt)
+    TextView marRatioText;
     @BindView(R.id.ratio_bar)
     SeekBar ratioBar;
+    @BindView(R.id.radio_txt)
+    TextView ratioText;
     @BindView(R.id.preamble_detect_group)
     RadioGroup preambleDetectionTypeGroup;
     @BindView(R.id.mic_down)
@@ -100,6 +105,7 @@ public class SettingActivity extends AppCompatActivity{
             @Override
             public void onProgressChanged(SeekBar seekBar, int i, boolean b) {
                 maxAvgRatio = i;
+                marRatioText.setText(Integer.toString(maxAvgRatio));
                 saveSettings();
             }
 
@@ -118,6 +124,7 @@ public class SettingActivity extends AppCompatActivity{
             @Override
             public void onProgressChanged(SeekBar seekBar, int i, boolean b) {
                 ratio = i;
+                ratioText.setText(Integer.toString(ratio));
                 saveSettings();
             }
 
@@ -161,7 +168,9 @@ public class SettingActivity extends AppCompatActivity{
 
     private void loadSettings(){
         maxAvgRatioBar.setProgress(maxAvgRatio);
+        marRatioText.setText(Integer.toString(maxAvgRatio));
         ratioBar.setProgress(ratio);
+        ratioText.setText(Integer.toString(ratio));
         switch (micUsed){
             case FlagVar.MIC_UP:{
                 micUpButton.setChecked(true);

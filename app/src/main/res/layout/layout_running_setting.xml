@@ -37,6 +37,11 @@
             android:layout_height="wrap_content"
             android:text="maxAvgRatio:"/>
 
+        <TextView
+            android:layout_width="24dp"
+            android:layout_height="wrap_content"
+            android:id="@+id/mar_ratio_txt"/>
+
         <SeekBar
             android:layout_width="match_parent"
             android:layout_height="match_parent"
@@ -54,6 +59,11 @@
             android:layout_height="wrap_content"
             android:textSize="18dp"
             android:text="Ratio:"/>
+
+        <TextView
+            android:layout_width="24dp"
+            android:layout_height="wrap_content"
+            android:id="@+id/radio_txt"/>
 
         <SeekBar
             android:layout_width="match_parent"
