@@ -48,6 +48,17 @@ public class Algorithm {
         }
     }
 
+    public static CriticalPoint getCriticalPoint(double[] s, int low, int high){
+        CriticalPoint criticalPoint = new CriticalPoint();
+        for(int i = low; i < high; i++){
+            if(s[i] > criticalPoint.peak){
+                criticalPoint.peak = s[i];
+                criticalPoint.index = i;
+            }
+        }
+        return criticalPoint;
+    }
+
     /**
      * get both the max vlaue and its corresponding index
      * @param s - input array in float format
@@ -99,6 +110,15 @@ public class Algorithm {
         return sum;
     }
 
+    public static double meanValue(double[] s, int low, int high){
+        double sum = 0;
+        for(int i = low ; i <= high ; i++){
+            sum += s[i];
+        }
+        sum /= (high - low + 1);
+        return sum;
+    }
+
     public static short meanValue(short[] s, int low, int high){
         outOfRangeDetection(s.length,low,high);
         long sum = 0;
@@ -108,6 +128,17 @@ public class Algorithm {
         sum /= (high - low + 1);
         return (short) sum;
     }
+
+    public static double getMax(double[] s, int low, int high){
+        double max = Double.MIN_VALUE;
+        for(int i = low; i < high; i++){
+            if(max < s[i]){
+                max = s[i];
+            }
+        }
+        return max;
+    }
+
 
     public static void outOfRangeDetection(int len, int low, int high){
         if(low <= high && low >= 0 && high < len){

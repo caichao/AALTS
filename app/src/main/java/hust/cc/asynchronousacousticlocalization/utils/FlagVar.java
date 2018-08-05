@@ -56,10 +56,11 @@ public interface FlagVar {
     float maxAvgRatioThreshold = 8f;
     float ratioThreshold = 9;
     float ratioAvailableThreshold = 0.4f;
+    float naiveThreshold = 5;
     /*****************************************************/
 
-    //becon message
-    float beconMessageTime = TPreamble+guardInterval+TSymbol;
+    //beacon message
+    float beconMessageTime = TPreamble+guardInterval*2+TSymbol*2;
     int LPreamble = (int)(new BigDecimal(TPreamble*Fs).setScale(0, BigDecimal.ROUND_HALF_UP).floatValue());
     int LSymbol = (int)(new BigDecimal(TSymbol*Fs).setScale(0, BigDecimal.ROUND_HALF_UP).floatValue());
     int beconMessageLength = (int)(new BigDecimal(beconMessageTime*Fs).setScale(0, BigDecimal.ROUND_HALF_UP).floatValue());
