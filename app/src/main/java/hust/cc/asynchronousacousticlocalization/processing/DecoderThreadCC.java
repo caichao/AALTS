@@ -1,5 +1,7 @@
 package hust.cc.asynchronousacousticlocalization.processing;
 
+import android.util.Log;
+
 public class DecoderThreadCC extends DecoderCC implements Runnable{
 
     private int recordBufferSize = 4096;
@@ -7,6 +9,7 @@ public class DecoderThreadCC extends DecoderCC implements Runnable{
     private int processBufferSize = recordBufferSize + recordBufferSize / 2; // = 6144
     private boolean isThreadAlive = true;
     private volatile boolean isDataReady = false; // synchronization
+    private String TAG = "DecoderThreadCC";
 
     private short[] processBuffer = null;
     private short[] lastDataBuffer = null;
@@ -33,11 +36,19 @@ public class DecoderThreadCC extends DecoderCC implements Runnable{
 
     @Override
     public void run() {
-
+        CriticalPoint criticalPoint = null;
         while (isThreadAlive){
             if(isDataReady == true){
                 isDataReady = false;
-
+                extractSamples();
+                long startTime = System.currentTimeMillis();   //获取开始时间
+                criticalPoint = preambleDetection(processBuffer);
+                if(criticalPoint.isReferenceSignalExist) {
+//                    Log.e(TAG, "------" + criticalPoint.toString());
+                }
+                long endTime = System.currentTimeMillis();
+                Log.e(TAG, "Time = " + (endTime - startTime));
+//                Log.e(TAG, "Max = "+Algorithm.getMax(processBuffer, 0, processBufferSize));
             }
         }
     }

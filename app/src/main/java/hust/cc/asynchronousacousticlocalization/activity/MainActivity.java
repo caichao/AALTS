@@ -21,7 +21,9 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.jjoe64.graphview.GraphView;
 import com.jjoe64.graphview.series.DataPoint;
+import com.jjoe64.graphview.series.LineGraphSeries;
 
 import org.jtransforms.fft.FloatFFT_1D;
 
@@ -38,6 +40,7 @@ import hust.cc.asynchronousacousticlocalization.processing.DecodThread;
 import hust.cc.asynchronousacousticlocalization.processing.DecodeScheduleMessage;
 //import hust.cc.asynchronousacousticlocalization.processing.ScheduleListener;
 import hust.cc.asynchronousacousticlocalization.processing.Decoder;
+import hust.cc.asynchronousacousticlocalization.processing.DecoderThreadCC;
 import hust.cc.asynchronousacousticlocalization.processing.HampelFilter;
 import hust.cc.asynchronousacousticlocalization.utils.BioClient;
 import hust.cc.asynchronousacousticlocalization.utils.CapturedBeaconMessage;
@@ -72,6 +75,8 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
     EditText editThreshold;
     @BindView(R.id.out_linear)
     LinearLayout outLinear;
+    @BindView(R.id.debug_plot)
+    GraphView graphView;
 
 
 
@@ -79,7 +84,8 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
 
     private AudioRecorder audioRecorder = new AudioRecorder();
     //private PlayThread playThread = new PlayThread();
-    private DecodThread decodThread;
+//    private DecodThread decodThread;
+    private DecoderThreadCC decoderThreadCC;
 
     // by cc
     private DecodeScheduleMessage decodeScheduleMessage = null;
@@ -96,7 +102,8 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
 
     String testCaptureBeaconMessage = "";
     //public static int targetId =
-
+    // for the dubug purpose
+    private LineGraphSeries<DataPoint> dataPointLineGraphSeries;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -108,43 +115,43 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
 //        testHampel();
     }
 
-
-
-    private void testHampel(){
-        try {
-            HampelFilter hf = new HampelFilter(4, 5);
-            double[] data = new double[100];
-            double[] medians = new double[100];
-            double[] hampels = new double[100];
-            for (int i = 0; i < data.length; i++) {
-                data[i] = Math.random();
-                if(i%10 == 0){
-                    data[i] += 10;
-                }
-                hf.addData(data[i]);
-                if (hf.isReady()) {
-                    medians[i] = hf.getMedian();
-                    hampels[i] = hf.getHampelVal();
-                }else{
-                    medians[i] = 0;
-                    hampels[i] = 0;
-                }
-
-            }
-            System.out.println(Arrays.toString(data));
-            System.out.println(Arrays.toString(medians));
-            System.out.println(Arrays.toString(hampels));
-        }catch (Exception e){
-            e.printStackTrace();
+    //***************************
+    private DataPoint[] generateData(){
+        int count = 300;
+        DataPoint[] values = new DataPoint[count];
+        for(int i = 0; i < count; i++){
+            double x = i;
+            double y = Math.random() + 0.3;
+            DataPoint v = new DataPoint(x, y);
+            values[i] = v;
         }
-
+        return values;
     }
+
+    private void updateView(double[] s){
+        int dataLength = s.length;
+        DataPoint[] values = new DataPoint[dataLength];
+        for(int i = 0; i < dataLength; i++){
+            double xx = i;
+            double yy = s[i];
+            DataPoint vv = new DataPoint(xx, yy);
+            values[i] = vv;
+        }
+        dataPointLineGraphSeries.resetData(values);
+    }
+
+    //****************************
+
 
     private void initParams(){
 
-        decodThread = new DecodThread(myHandler);
+        dataPointLineGraphSeries = new LineGraphSeries<>(generateData());
+        graphView.addSeries(dataPointLineGraphSeries);
+        /*decodThread = new DecodThread(myHandler);
         decodThread.initialize(AudioRecorder.getBufferSize()/2);
-        new Thread(decodThread).start();
+        new Thread(decodThread).start();*/
+        decoderThreadCC = new DecoderThreadCC();
+        new Thread(decoderThreadCC).start();
         audioRecorder.recordingCallback(this);
         recvButton.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -184,7 +191,7 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
         clearButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                decodThread.clear();
+                //decodThread.clear();
                 Toast.makeText(getApplicationContext(), "Counter reset", Toast.LENGTH_SHORT).show();
             }
         });
@@ -235,8 +242,8 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
 
     private void writeIntoFiles(){
         System.out.println("write start");
-        FileUtils.saveBytes(decodThread.testData, "testData");
-        FileUtils.saveBytes(decodThread.testCounters,"testCounter");
+//        FileUtils.saveBytes(decodThread.testData, "testData");
+//        FileUtils.saveBytes(decodThread.testCounters,"testCounter");
 //        FileUtils.saveBytes(DecodThread.downSymbolSamples[0],"down0");
 //        FileUtils.saveBytes(DecodThread.downSymbolSamples[1],"down1");
 //        FileUtils.saveBytes(DecodThread.downSymbolSamples[2],"down2");
@@ -262,7 +269,8 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
 
         decodeScheduleMessage.removeObserver(playThread);
         decodeScheduleMessage.close();
-        decodThread.close();
+//        decodThread.close();
+        decoderThreadCC.close();
         playThread.close();
         audioRecorder.finishRecord();
         //rspHandler.close();
@@ -365,9 +373,7 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
     @Override
     public void onDataReady(short[] data, int len) {
 
-//        long time1 = System.nanoTime();
-
-        short[] data1 = new short[len];
+        /*short[] data1 = new short[len];
         short[] data2 = new short[len];
         for (int i = 0; i < len; i++) {
             data1[i] = data[2 * i];
@@ -376,10 +382,8 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
 
         if(decodThread.unhandledSampleList.size()<100) {
             decodThread.fillSamples(data2);
-        }
-        long time2 = System.nanoTime();
-//        System.out.println("nano:"+(time2-time1));
-
+        }*/
+        decoderThreadCC.fillSamples(data);
     }
 
     // here we process the receiver message aboust schedule information
@@ -444,7 +448,8 @@ public class MainActivity extends AppCompatActivity implements AudioRecorder.Rec
                                         "%d%n" +
                                         "%d cm/s",
                                 cbMsg.selfAnchorId, cbMsg.capturedAnchorId, cbMsg.capturedSequence, cbMsg.preambleIndex, cbMsg.looperCounter,
-                                decodThread.getBeconCnt(),decodThread.getErrorCnt(),(int)cbMsg.speed);
+//                                decodThread.getBeconCnt(),decodThread.getErrorCnt(),(int)cbMsg.speed);
+                                1, 2, (int)cbMsg.speed);
                         text.setText(showTxt);
                         text1.setText(showTxt1);
                         break;

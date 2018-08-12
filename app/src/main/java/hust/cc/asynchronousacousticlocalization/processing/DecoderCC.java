@@ -1,8 +1,11 @@
 package hust.cc.asynchronousacousticlocalization.processing;
 
+import android.util.Log;
+
 import java.util.Arrays;
 
 import hust.cc.asynchronousacousticlocalization.physical.SignalGenerator;
+import hust.cc.asynchronousacousticlocalization.utils.FileUtils;
 import hust.cc.asynchronousacousticlocalization.utils.FlagVar;
 
 public class DecoderCC implements FlagVar{
@@ -40,16 +43,19 @@ public class DecoderCC implements FlagVar{
     private Spectrum forPreambleFFT = null;
     private Spectrum forSymbolFFT = null;
 
+    private String TAG = "[DecoderCC]";
+
     public static float rThreshold = ratioThreshold;
 
     protected void initParam(int processBufferSize){
         preambleCorrLen = getCorrelationLength(processBufferSize, LPreamble);
         symbolCorrLen = getCorrelationLength(LSymbol, LSymbol);
+
         //compute the fft of the preambles and symbols to reduce the computation cost;
-        upPreambleFFTComplex = new double[preambleCorrLen];
-        downPreambleFFTComplex = new double[preambleCorrLen];
-        upSymbolFFTsComplex = new double[numberOfSymbols][symbolCorrLen];
-        downSymbolFFTsComplex = new double[numberOfSymbols][symbolCorrLen];
+        upPreambleFFTComplex = new double[preambleCorrLen*2];
+        downPreambleFFTComplex = new double[preambleCorrLen*2];
+        upSymbolFFTsComplex = new double[numberOfSymbols][symbolCorrLen*2];
+        downSymbolFFTsComplex = new double[numberOfSymbols][symbolCorrLen*2];
 
         preambleCorrResultsMagnitude = new double[preambleCorrLen];
         preambleCorrResultsComplex = new double[preambleCorrLen * 2];
@@ -63,18 +69,20 @@ public class DecoderCC implements FlagVar{
 
         signalNormalization(upPreamble, upPreambleFFTComplex);
         forPreambleFFT.performFFT(upPreambleFFTComplex);
-        System.arraycopy(forPreambleFFT.getOutputComplex(),0, upPreambleFFTComplex, 0 ,  upPreambleFFTComplex.length);
-
+        System.arraycopy(forPreambleFFT.getOutputComplex(),0, upPreambleFFTComplex, 0 ,  preambleCorrLen*2);
+//        FileUtils.saveBytes(forPreambleFFT.getOutputComplex(), "FFT_complex");
+//        FileUtils.saveBytes(forPreambleFFT.getOutputMagnitude(), "");
         for(int i = 0; i < numberOfSymbols; i++){
             signalNormalization(downSymbolSamples[i], downSymbolFFTsComplex[i]);
             forSymbolFFT.performFFT(downSymbolFFTsComplex[i]);
-            System.arraycopy(forSymbolFFT.getOutputComplex(), 0, downSymbolFFTsComplex[i], 0,  downSymbolFFTsComplex.length);
+            System.arraycopy(forSymbolFFT.getOutputComplex(), 0, downSymbolFFTsComplex[i], 0,  symbolCorrLen*2);
         }
     }
 
     private int getCorrelationLength(int lengtha, int lengthb){
         int maxLength = lengtha + lengthb;
-        return (int)(Math.log(maxLength) / Math.log(2) + 1);
+        int N = (int)(Math.log(maxLength) / Math.log(2) + 1);
+        return (int)(Math.pow(2, N));
     }
 
     public void signalNormalization(short[] input, double[] normalizedSignal){
@@ -84,8 +92,12 @@ public class DecoderCC implements FlagVar{
     }
 
     public void xcorr(double[] inputFFTComplex, double[] referenceFFTComplex, double[] results, int size){
-        int length = results.length / 2;
-        for(int i = 0; i < length; i++){
+//        int length = size;
+//        Log.e(TAG, "[size] = "+size);
+//        Log.e(TAG, "inputFFTComplex.length = " + inputFFTComplex.length);
+//        Log.e(TAG, "referenceFFTComplex.length = " + referenceFFTComplex.length);
+//        Log.e(TAG, "results.length = " + results.length);
+        for(int i = 0; i < size; i++){
             results[2*i] = inputFFTComplex[2*i] * referenceFFTComplex[2*i] + inputFFTComplex[2*i+1] * referenceFFTComplex[2*i+1];
             results[2*i + 1] = inputFFTComplex[2*i+1]*referenceFFTComplex[2*i] - inputFFTComplex[2*i]*referenceFFTComplex[2*i+1];
         }
@@ -100,9 +112,13 @@ public class DecoderCC implements FlagVar{
         CriticalPoint criticalPoint = null;
         Arrays.fill(preambleCorrResultsMagnitude, 0);
         signalNormalization(inputSamples, preambleCorrResultsMagnitude);
+        //Log.e(TAG, "Noramlized max = " + Algorithm.getMax(preambleCorrResultsMagnitude, 0, preambleCorrResultsMagnitude.length));
+
         forPreambleFFT.performFFT(preambleCorrResultsMagnitude);
         System.arraycopy(forPreambleFFT.getOutputComplex(), 0 ,preambleCalBufferComplex, 0, preambleCorrLen * 2);
-        xcorr(preambleCalBufferComplex, upPreambleFFTComplex, preambleCorrResultsMagnitude, preambleCorrLen);
+        xcorr(preambleCalBufferComplex, upPreambleFFTComplex, preambleCorrResultsComplex, preambleCorrLen);
+        Algorithm.getMagnitude(preambleCorrResultsMagnitude, preambleCorrResultsComplex);
+        //Log.e(TAG, "FFT max = " + Algorithm.getMax(forPreambleFFT.getOutputMagnitude(), 0, preambleCorrResultsMagnitude.length));
         criticalPoint = Algorithm.getCriticalPoint(preambleCorrResultsMagnitude, 0, preambleCorrResultsMagnitude.length);
         criticalPoint.isReferenceSignalExist = false;
         if(criticalPoint.peak < naiveThreshold){
@@ -115,6 +131,7 @@ public class DecoderCC implements FlagVar{
         }
         double mean = Algorithm.meanValue(preambleCorrResultsMagnitude, startIndex, criticalPoint.index);
         double ratio = criticalPoint.peak / mean;
+        criticalPoint.ratio = ratio;
         if(ratio > maxAvgRatioThreshold){
             criticalPoint.isReferenceSignalExist = true;
         }

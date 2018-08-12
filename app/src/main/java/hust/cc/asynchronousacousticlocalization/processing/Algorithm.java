@@ -59,6 +59,13 @@ public class Algorithm {
         return criticalPoint;
     }
 
+    public static void getMagnitude(double[] magnitude, double[] complex){
+        int length = magnitude.length;
+        for(int i = 0; i < length; i++){
+            magnitude[i] = Math.sqrt(complex[2*i]*complex[2*i] + complex[2*i+1]*complex[2*i+1]);
+        }
+    }
+
     /**
      * get both the max vlaue and its corresponding index
      * @param s - input array in float format
@@ -130,6 +137,16 @@ public class Algorithm {
     }
 
     public static double getMax(double[] s, int low, int high){
+        double max = Double.MIN_VALUE;
+        for(int i = low; i < high; i++){
+            if(max < s[i]){
+                max = s[i];
+            }
+        }
+        return max;
+    }
+
+    public static double getMax(short[] s, int low, int high){
         double max = Double.MIN_VALUE;
         for(int i = low; i < high; i++){
             if(max < s[i]){
