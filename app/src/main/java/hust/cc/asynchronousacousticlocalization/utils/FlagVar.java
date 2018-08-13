@@ -56,7 +56,8 @@ public interface FlagVar {
     float maxAvgRatioThreshold = 8f;
     float ratioThreshold = 9;
     float ratioAvailableThreshold = 0.4f;
-    float naiveThreshold = 5;
+    float naiveThreshold = 1;
+    float upLimitThreshold = 50;
     /*****************************************************/
 
     //beacon message

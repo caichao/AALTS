@@ -3,9 +3,11 @@ package hust.cc.asynchronousacousticlocalization.utils;
 import android.os.Environment;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
+import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -187,5 +189,19 @@ public class FileUtils {
             }
         }
         return filterCoefficient;
+    }
+
+    public static void saveStringMessage(String fileName, String message){
+        PrintWriter out = null;
+        try {
+            out = new PrintWriter(new BufferedWriter(new FileWriter(fileName, true)));
+            out.println(message);
+        }catch (Exception e) {
+            System.err.println(e);
+        }finally{
+            if(out != null){
+                out.close();
+            }
+        }
     }
 }
