@@ -57,7 +57,7 @@ Please DO ALLOW recording when first install this app.
 4. You can now see the located positions on the server side. 
 ![Running AALTS](https://github.com/caichao/AALTS/blob/master/images/runtime_ui.webp)
 
-Developer: Chao Cai (caichao08@gmail), Ruinan Jin (jrnsneepy@gmail.com), Yan Yan (1063422772@qq.com)
+Developer: Chao Cai (caichao08@gmail.com), Ruinan Jin (jrnsneepy@gmail.com), Yan Yan (1063422772@qq.com)
 Experimenter: Peng Wang (somewap@qq.com), Liyuan Ye (yeliyuan1997@qq.com), Pei Rao (raopei1994@163.com)
 
 If you find this helpful, please cite our paper, thanks. 
