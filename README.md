@@ -10,11 +10,15 @@
 
 
 ## To run AALTS, it needs to run the three applications in tandem. 
+This localization project needs at least three beacons for support. For more information about the beacon, please visit our [ASDR platform](https://github.com/caichao/ASDR). The beacons should be distributed in a room and connect to a wireless hot spot. 
 
 1. First, run the server side application
 
-2. Second, activate the beacon side program
-This localization project needs at least three beacons for support. For more information about the beacon, please visit our [ASDR platform](https://github.com/caichao/ASDR). We wrote a json script to configure these beacons. This json script allows to write the following 
+2. Second, connect the beacon to a hotspot. You can wrote a bash for automatic connection. 
+If it is possible, you'd better bind a static IP for each beacon. This can be achieved by encoding a relationship between the MAC address of pi and a static ip. 
+
+
+We wrote a json script to configure these beacons. This json script allows to write the following 
 '''
 {
 "server_ip":"192.168.1.145", 
@@ -24,6 +28,18 @@ This localization project needs at least three beacons for support. For more inf
 "preamble_threshold":"6"
 }
 '''
+the server_ip indicates your server side host ip;
+the sechdule_port is to receive the server side app's broadcasting message for schedule beacon message transmission;
+the upload_port is used to upload detect beacon messages;
+the anchorId is for current beacon and it should be unique;
+the preamble_threshold should be calibrate but only needs one-time efforts. 
+
+After your successfully connect the pi to a wireless hotspot. Then you can run the bash file (launch_util_gpu.sh) we provided on your PC side to schedule the beacons for message transmissions. 
+
+Before the above preparation, you can first run the beacon side program solely on the pi so as to check whether the acoustic board function properly. 
+If the acoustic board is ok, you can see the following logging information. 
+![Log message is the board is ok](https://github.com/caichao/AALTS/blob/master/images/anchor_debug.webp)
+
 
 3. Open the android side app. 
 
