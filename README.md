@@ -21,7 +21,7 @@ After running the program of server side, you should configure the anchor positi
 If it is possible, you'd better bind a static IP for each beacon. This can be achieved by encoding a relationship between the MAC address of pi and a static ip. 
 
 We wrote a json script to configure these beacons. 
-'''
+```
 {
 "server_ip":"192.168.1.145", 
 "schedule_port":"22222",
@@ -29,7 +29,7 @@ We wrote a json script to configure these beacons.
 "anchorId":"2",
 "preamble_threshold":"6"
 }
-'''
+```
 the server_ip indicates your server side host ip;
 the sechdule_port is to receive the server side app's broadcasting message for schedule beacon message transmission;
 the upload_port is used to upload detect beacon messages;
@@ -38,8 +38,8 @@ the preamble_threshold should be calibrate but only needs one-time efforts.
 
 After your successfully connect the pi to a wireless hotspot. Then you can run the bash file (launch_util_gpu.sh) we provided on your PC side to schedule the beacons for message transmissions. The following steps are for windows.
 [1] Open git bash at the folder where it contains the shell script;
-[2] ''' source launch_util_gpu.sh'''
-[3] ''' lanchAll'''
+[2] ``` source launch_util_gpu.sh```
+[3] ``` lanchAll```
 Then, everything is ready now. 
 ![step to run the shell script](https://github.com/caichao/AALTS/blob/master/images/lanch.webp)
 
@@ -61,7 +61,7 @@ Developer: Chao Cai (caichao08@gmail), Ruinan Jin (jrnsneepy@gmail.com), Yan Yan
 Experimenter: Peng Wang (somewap@qq.com), Liyuan Ye (yeliyuan1997@qq.com), Pei Rao (raopei1994@163.com)
 
 If you find this helpful, please cite our paper, thanks. 
-'''
+```
 @ARTICLE{AALTS,
   author={C. {Cai} and R. {Zheng} and J. {Li} and L. {Zhu} and H. {Pu} and M. {Hu}},
   journal={IEEE Internet of Things Journal}, 
@@ -70,5 +70,5 @@ If you find this helpful, please cite our paper, thanks.
   volume={7},
   number={2},
   pages={830-845},}
- '''
+ ```
  
