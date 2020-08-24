@@ -51,7 +51,7 @@ If the acoustic board is ok, you can see the following logging information.
 3. Open the android side app. 
 At the first time you run this application, you should configure the server side IP, port, and target id. There is also another page which can be activated on the menu bar to debug algorithm parameters. For inexperience user, we do not recommend any modification. 
 Please DO ALLOW recording when first install this app. 
-![running ui](https://github.com/caichao/AALTS/blob/master/images/run_ui.png), ![configuration page](https://github.com/caichao/AALTS/blob/master/images/conf.png)
+![running ui](https://github.com/caichao/AALTS/blob/master/images/run_ui1.png), ![configuration page](https://github.com/caichao/AALTS/blob/master/images/conf1.png)
 
 
 4. You can now see the located positions on the server side. 
